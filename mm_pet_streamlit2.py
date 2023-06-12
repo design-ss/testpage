@@ -3,7 +3,7 @@ import numpy as np
 from scipy import ndimage
 import zipfile
 import io
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageDraw
 import time
 
 
@@ -44,7 +44,82 @@ st.markdown('---')
 # パターン1説明
 st.write('パターン1：見た目の中心を取って配置します。')
 
+# パターン1のプレビューボタン
+preview_button = st.button('パターン1：プレビュー')
+
 # パターン1
+# パターン1のプレビュー処理
+if preview_button:
+    if not export_files:
+        st.error("エラー: export_filesが空です。")
+    else:
+        with st.spinner("画像生成中です..."):
+            # 全部プレビュー
+            for export_file in export_files:
+
+                ####################################
+
+                #　50 × 50、100×100　のリサイズ
+
+                ####################################
+                image = Image.open(export_file)
+
+                # 不要な透明部分削除
+                image = image.crop(image.getbbox())
+
+                # メモ（のちほど）
+                width, height = image.size
+                if width < height:
+                    if width > 100 and height / width > 1.7:
+                        resized_image = image.resize((70, int(height * 70 / width)))
+                    else:
+                        resized_image = image.resize((int(width * 100 / height), 100))
+                else:
+                    if height > 100 and width / height > 1.7:
+                        resized_image = image.resize((int(width * 70 / height), 70))
+                    else:
+                        resized_image = image.resize((100, int(height * 100 / width)))
+
+                image_np = np.array(resized_image)
+                alpha = np.array(resized_image.convert('L'))
+                cy, cx = ndimage.center_of_mass(alpha)
+
+                # 中心座標
+                center_x = int(cx)
+                center_y = int(cy)
+
+                bottom_coord = center_y + 50
+
+                # 画像の不透明部分の最下部
+                image_y = np.max(np.nonzero(alpha)[0])
+
+                width, height = image.size
+                if not (width < height and width > 100 and height / width > 1.7) and not (height < width and height > 100 and width / height > 1.7):
+                    # （center_y - 50）-　image_yの値により移動
+                    if bottom_coord - image_y > 6:
+                        center_y -= (bottom_coord - image_y) - 6
+                    elif bottom_coord - image_y < 6:
+                        center_y += 6 - (bottom_coord - image_y)
+
+                # 0.8縮小
+                resized_image = resized_image.resize((int(resized_image.width * 0.8), int(resized_image.height * 0.8)))
+                center_x = int(center_x * 0.8)
+                center_y = int(center_y * 0.8)
+
+                # 100×100
+                b_image = resized_image.crop((center_x - 50, center_y - 50, center_x + 50, center_y + 50))
+
+                # 中心線を描画する
+                draw = ImageDraw.Draw(b_image)
+                draw.line((50, 0, 50, 100), fill="red", width=1)
+                draw.line((0, 50, 100, 50), fill="red", width=1)
+
+                # プレビュー画像を表示する
+                st.image(getPreviewImage(b_image), caption=export_file.name, use_column_width=False)
+
+
+
+
 if st.button('パターン1：ペット一括書き出し'):
     with st.spinner("画像生成中です..."):
         binary_dict.clear() # 初期化
