@@ -6,7 +6,6 @@ import io
 from PIL import Image, ImageOps, ImageDraw
 import time
 
-
 binary_dict = dict()
 
 def show_zip_download(file_name, target_dict):
@@ -41,11 +40,25 @@ st.markdown('<br>''<br>', unsafe_allow_html=True)
 st.markdown('---')
 
 
+
 # パターン1説明
 st.write('パターン1：見た目の中心を取って配置します。')
 
 # パターン1のプレビューボタン
 preview_button1 = st.button('パターン1：プレビュー')
+
+
+# パターン3の説明文
+st.write('パターン2：調整できます。スライダーを動かすとプレビューが出ます。')
+
+
+# ボタンを追加
+preview_button2 = st.button('パターン2：プレビュー')
+
+horizontal_shift = st.slider('数字を増やすほど左に移動します。', min_value=-30, max_value=30, value=0)
+vertical_shift = st.slider('数字を増やすほど上に移動します。', min_value=-30, max_value=30, value=0)
+scale = st.slider('数字を増やすほど拡大されます。', min_value=0.0, max_value=2.0, value=0.7)
+
 
 # パターン1
 # パターン1のプレビュー処理
@@ -119,8 +132,6 @@ if preview_button1:
 
                 # プレビュー画像を表示する　export_file.name
                 st.image(getPreviewImage(b_image), caption=export_file.name, use_column_width=False)
-
-
 
 
 if st.button('パターン1：ペット一括書き出し'):
@@ -251,25 +262,8 @@ if st.button('パターン1：ペット一括書き出し'):
     show_zip_download("output1.zip", binary_dict)
 
 
-    
-st.markdown('<br>', unsafe_allow_html=True)
-st.markdown('---')
-
-from PIL import ImageDraw
-
-# パターン3の説明文
-st.write('パターン3：1枚ずつ調整できます。スライダーを動かすとプレビューが出ます。')
-
-# ボタンを追加
-preview_button3 = st.button('パターン3：プレビュー')
-
-horizontal_shift = st.slider('数字を増やすほど左に移動します。', min_value=-30, max_value=30, value=0)
-vertical_shift = st.slider('数字を増やすほど上に移動します。', min_value=-30, max_value=30, value=0)
-scale = st.slider('数字を増やすほど拡大されます。', min_value=0.0, max_value=2.0, value=0.7)
-
-
 # スライダーの値が変更されたときだけ処理を実行する
-if horizontal_shift or vertical_shift or scale != 0.7 or preview_button3:
+if horizontal_shift or vertical_shift or scale != 0.7 or preview_button2:
     if not export_files:
         st.error("エラー: ファイルを選択してください。")
     else:
@@ -314,8 +308,8 @@ if horizontal_shift or vertical_shift or scale != 0.7 or preview_button3:
             # プレビュー画像を表示する
             st.image(getPreviewImage(b_image), caption=export_file.name, use_column_width=False)
 
-# パターン3のボタンクリックで処理実行
-if st.button('パターン3：ペット一括書き出し'):
+# パターン2のボタンクリックで処理実行
+if st.button('パターン2：ペット一括書き出し'):
     with st.spinner("画像生成中です..."):
         binary_dict.clear() # 初期化
 
