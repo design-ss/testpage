@@ -257,12 +257,13 @@ from PIL import ImageDraw
 # パターン3の説明文
 st.write('パターン3：1枚ずつ調整できます。スライダーを動かすとプレビューが出ます。')
 
+# ボタンを追加
+preview_button = st.button('パターン3：プレビュー')
+
 horizontal_shift = st.slider('数字を増やすほど左に移動します。', min_value=-30, max_value=30, value=0)
 vertical_shift = st.slider('数字を増やすほど上に移動します。', min_value=-30, max_value=30, value=0)
 scale = st.slider('数字を増やすほど拡大されます。', min_value=0.0, max_value=2.0, value=0.7)
 
-# ボタンを追加
-preview_button = st.button('パターン3：プレビュー')
 
 # スライダーの値が変更されたときだけ処理を実行する
 if horizontal_shift or vertical_shift or scale != 0.7 or preview_button:
