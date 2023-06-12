@@ -45,18 +45,17 @@ st.markdown('---')
 st.write('パターン1：見た目の中心を取って配置します。')
 
 # パターン1のプレビューボタン
-preview_button = st.button('パターン1：プレビュー')
+preview_button1 = st.button('パターン1：プレビュー')
 
 # パターン1
 # パターン1のプレビュー処理
-if preview_button:
+if preview_button1:
     if not export_files:
-        st.error("エラー: export_filesが空です。")
+        st.error("エラー: ファイルを選択してください。")
     else:
         with st.spinner("画像生成中です..."):
             # 全部プレビュー
             for export_file in export_files:
-
                 ####################################
 
                 #　50 × 50、100×100　のリサイズ
@@ -81,7 +80,11 @@ if preview_button:
                         resized_image = image.resize((100, int(height * 100 / width)))
 
                 image_np = np.array(resized_image)
-                alpha = np.array(resized_image.convert('L'))
+                # st.image(image, caption = "croped_image") ###test
+                # st.image(resized_image, caption = "resized_image") ###test
+                # st.write(f"image_np.shape: {image_np.shape}") # image_np の形(dimention)確認用 ###test
+                # alpha = image_np[:, :, 3] # 圧縮 png は ndim(dimention)が２になるためエラーになる
+                alpha = np.array(resized_image.convert('L')) # 2 dimention の grayscale イメージ化して取る。変数名は alpha のままだけで、値は alpha ではなく、grayscale の 2次元 numpy array
                 cy, cx = ndimage.center_of_mass(alpha)
 
                 # 中心座標
@@ -114,7 +117,7 @@ if preview_button:
                 draw.line((50, 0, 50, 100), fill="red", width=1)
                 draw.line((0, 50, 100, 50), fill="red", width=1)
 
-                # プレビュー画像を表示する
+                # プレビュー画像を表示する　export_file.name
                 st.image(getPreviewImage(b_image), caption=export_file.name, use_column_width=False)
 
 
@@ -258,7 +261,7 @@ from PIL import ImageDraw
 st.write('パターン3：1枚ずつ調整できます。スライダーを動かすとプレビューが出ます。')
 
 # ボタンを追加
-preview_button = st.button('パターン3：プレビュー')
+preview_button3 = st.button('パターン3：プレビュー')
 
 horizontal_shift = st.slider('数字を増やすほど左に移動します。', min_value=-30, max_value=30, value=0)
 vertical_shift = st.slider('数字を増やすほど上に移動します。', min_value=-30, max_value=30, value=0)
@@ -266,9 +269,9 @@ scale = st.slider('数字を増やすほど拡大されます。', min_value=0.0
 
 
 # スライダーの値が変更されたときだけ処理を実行する
-if horizontal_shift or vertical_shift or scale != 0.7 or preview_button:
+if horizontal_shift or vertical_shift or scale != 0.7 or preview_button3:
     if not export_files:
-        st.error("エラー: export_filesが空です。")
+        st.error("エラー: ファイルを選択してください。")
     else:
         # パターン3の処理実行
         with st.spinner("画像生成中です..."):
@@ -309,7 +312,7 @@ if horizontal_shift or vertical_shift or scale != 0.7 or preview_button:
             draw.line((0, 50, 100, 50), fill="red", width=1)
 
             # プレビュー画像を表示する
-            st.image(getPreviewImage(b_image), caption='100×100のプレビュー', use_column_width=False)
+            st.image(getPreviewImage(b_image), caption=export_file.name, use_column_width=False)
 
 # パターン3のボタンクリックで処理実行
 if st.button('パターン3：ペット一括書き出し'):
