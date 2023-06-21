@@ -250,7 +250,7 @@ if vertical_shift or horizontal_shift or scale  or preview_button1:
                 if len(file_name) > 6:
                     file_name = file_name[:6] + "..."
                 if cols[i % 4].checkbox(file_name, key=f"select_{export_file.name}"):
-                    selected_files.append(export_file)　# プレビューに入れた空のリストに入れる
+                    selected_files.append(export_file)
 
 
 
