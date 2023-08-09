@@ -44,51 +44,28 @@ col1, _, col2 = st.columns([1, 0.1, 1])  # '_'は空のカラム
 # 男オーラ前ファイル指定
 with col1:
     export_files_top_male = st.file_uploader("男性用オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_top_male")
-    
-# アップロードされたファイルのリストを表示
-if export_files_top_male :
-    st.write("アップロードされたファイル:")
-    for file in export_files_top_male :
-        st.write(file.name)
+    if export_files_top_male:
+        export_files_top_male.sort(key=lambda x: x.name)
 
 # 女オーラ前ファイル指定
 with col2:
     export_files_top_female = st.file_uploader("女性用オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_top_female")
-
-# アップロードされたファイルのリストを表示
-if export_files_top_female :
-    st.write("アップロードされたファイル:")
-    for file in export_files_top_female :
-        st.write(file.name)
-
+    if export_files_top_female:
+        export_files_top_female.sort(key=lambda x: x.name)
 
 col3, _, col4 = st.columns([1, 0.1, 1])  # '_'は空のカラム
 
 # 男オーラ後ろファイル指定
 with col3:
     export_files_bottom_male = st.file_uploader("男性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_male")
-
-# アップロードされたファイルのリストを表示
-if export_files_bottom_male  :
-    st.write("アップロードされたファイル:")
-    for file in  export_files_bottom_male  :
-        st.write(file.name)
+    if export_files_bottom_male:
+        export_files_bottom_male.sort(key=lambda x: x.name)
 
 # 女オーラ後ろファイル指定
 with col4:
     export_files_bottom_female = st.file_uploader("女性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_female")
-
-# アップロードされたファイルのリストを表示
-if export_files_bottom_female   :
-    st.write("アップロードされたファイル:")
-    for file in  export_files_bottom_female :
-        st.write(file.name)
-
-
-st.write('**男女シルエットを選択** <br>100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。', unsafe_allow_html=True)
-# 100×100男女シルエット
-silhouette_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="silhouette_file")
-silhouette_dict = {silhouette_file.name: silhouette_file for silhouette_file in silhouette_files}
+    if export_files_bottom_female:
+        export_files_bottom_female.sort(key=lambda x: x.name)
 
 
 
