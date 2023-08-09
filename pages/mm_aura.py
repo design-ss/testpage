@@ -72,14 +72,19 @@ export_files_bottom_male = sorted(export_files_bottom_male, key=lambda x: x.name
 export_files_bottom_female = sorted(export_files_bottom_female, key=lambda x: x.name)
 
 
-
+st.markdown('---')
 st.write('**男女シルエットを選択** <br>100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。', unsafe_allow_html=True)
 # 100×100男女シルエット
 silhouette_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="silhouette_file")
 silhouette_dict = {silhouette_file.name: silhouette_file for silhouette_file in silhouette_files}
 
+# ファイルが選択されていない場合はメッセージを表示する
+if not silhouette_files:
+    st.write('<span style="color:red;">未選択です。シルエットをアップロードしてください。</span>', unsafe_allow_html=True)
 
 
+st.markdown('---')
+st.write('**320/640調整用** ', unsafe_allow_html=True)
 # パラメータ調整スライダー 
 vertical_shift = st.slider('下移動⇔上移動', min_value=-320, max_value=320, value=0)
 horizontal_shift = st.slider('左移動⇔右移動', min_value=-320, max_value=320, value=0)
