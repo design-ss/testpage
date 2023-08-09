@@ -67,6 +67,12 @@ with col3:
 with col4:
     export_files_bottom_female = st.file_uploader("女性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_female")
 
+# ファイル名を昇順に並び替える
+export_files_top_male = sorted(export_files_top_male, key=lambda x: x.name)
+export_files_top_female = sorted(export_files_top_female, key=lambda x: x.name)
+export_files_bottom_male = sorted(export_files_bottom_male, key=lambda x: x.name)
+export_files_bottom_female = sorted(export_files_bottom_female, key=lambda x: x.name)
+
 
 st.write('**男女シルエットを選択** <br>100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。', unsafe_allow_html=True)
 # 100×100男女シルエット
