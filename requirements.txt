@@ -2,4 +2,4 @@ streamlit==1.23.1
 numpy==1.23.5
 scipy==1.10.0
 Pillow==9.4
-opencv-python==4.5.5
+opencv-python==4.5.5.62
