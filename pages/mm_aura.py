@@ -37,10 +37,10 @@ st.set_page_config(page_title='mmオーラ書き出し')
 st.title('mmオーラ書き出し')
 
 
-st.write('<br>**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <br>ファイルは選択順に関係なく「ファイル名の昇順」でアップされます。<br>そのため、前後オーラを書き出すときはファイル名の先頭に数字を付けるなどで順番を制御してください。', unsafe_allow_html=True)
+st.write('<br>**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <br>ファイルは選択順に関係なく「昇順」でアップされます。<br>そのため、前後オーラを書き出すときはファイル名の先頭に数字を付けるなどで順番を制御してください。', unsafe_allow_html=True)
 
 
-st.write('例<br>前オーラ：「1.前_目玉A」「2.前_目玉B」「3.前_目玉C」<br>後ろオーラ：「4.後ろ_目玉A」「5.後ろ_目玉B」「6.後ろ_目玉C」<br> ', unsafe_allow_html=True)
+st.write('例<br>前オーラ：「1.前_目玉A」「2.前_目玉B」「3.前_目玉C」<br>後ろオーラ：「4.後ろ_目玉A」「5.後ろ_目玉B」「3.後ろ_目玉C」<br> ', unsafe_allow_html=True)
 
 
 col1, col2 = st.columns(2)
@@ -50,28 +50,22 @@ col1, _, col2 = st.columns([1, 0.1, 1])  # '_'は空のカラム
 # 男オーラ前ファイル指定
 with col1:
     export_files_top_male = st.file_uploader("男性用オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_top_male")
-    if export_files_top_male:
-        export_files_top_male.sort(key=lambda x: x.name)
 
 # 女オーラ前ファイル指定
 with col2:
     export_files_top_female = st.file_uploader("女性用オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_top_female")
-    if export_files_top_female:
-        export_files_top_female.sort(key=lambda x: x.name)
+
 
 col3, _, col4 = st.columns([1, 0.1, 1])  # '_'は空のカラム
 
 # 男オーラ後ろファイル指定
 with col3:
     export_files_bottom_male = st.file_uploader("男性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_male")
-    if export_files_bottom_male:
-        export_files_bottom_male.sort(key=lambda x: x.name)
+
 
 # 女オーラ後ろファイル指定
 with col4:
     export_files_bottom_female = st.file_uploader("女性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_female")
-    if export_files_bottom_female:
-        export_files_bottom_female.sort(key=lambda x: x.name)
 
 
 st.write('**男女シルエットを選択** <br>100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。', unsafe_allow_html=True)
