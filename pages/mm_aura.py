@@ -44,6 +44,12 @@ col1, _, col2 = st.columns([1, 0.1, 1])  # '_'は空のカラム
 # 男オーラ前ファイル指定
 with col1:
     export_files_top_male = st.file_uploader("男性用オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_top_male")
+    
+# アップロードされたファイルのリストを表示
+if export_files_top_male :
+    st.write("アップロードされたファイル:")
+    for file in export_files_top_male :
+        st.write(file.name)
 
 # 女オーラ前ファイル指定
 with col2:
