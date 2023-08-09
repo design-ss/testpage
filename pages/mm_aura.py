@@ -36,11 +36,9 @@ st.set_page_config(page_title='mmオーラ書き出し')
 
 st.title('mmオーラ書き出し')
 
+st.write('<br>**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <br>ファイルは選択順に関係なく「昇順」でアップされます。<br>そのため、前後オーラを書き出すときはファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。', unsafe_allow_html=True)
 
-st.write('<br>**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <br>ファイルは選択順に関係なく「昇順」でアップされます。<br>そのため、前後オーラを書き出すときはファイル名の先頭に数字を付けるなどで順番を制御してください。', unsafe_allow_html=True)
-
-
-st.write('例<br>前オーラ：「1.前_目玉A」「2.前_目玉B」「3.前_目玉C」<br>後ろオーラ：「4.後ろ_目玉A」「5.後ろ_目玉B」「3.後ろ_目玉C」<br> ', unsafe_allow_html=True)
+st.write('例<br>前オーラ：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろオーラ：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> ', unsafe_allow_html=True)
 
 
 col1, col2 = st.columns(2)
@@ -66,12 +64,13 @@ with col3:
 # 女オーラ後ろファイル指定
 with col4:
     export_files_bottom_female = st.file_uploader("女性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_female")
-
+    
 # ファイル名を昇順に並び替える
 export_files_top_male = sorted(export_files_top_male, key=lambda x: x.name)
 export_files_top_female = sorted(export_files_top_female, key=lambda x: x.name)
 export_files_bottom_male = sorted(export_files_bottom_male, key=lambda x: x.name)
 export_files_bottom_female = sorted(export_files_bottom_female, key=lambda x: x.name)
+
 
 
 st.write('**男女シルエットを選択** <br>100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。', unsafe_allow_html=True)
