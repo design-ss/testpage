@@ -38,7 +38,7 @@ st.title('mmオーラ書き出し')
 
 st.write('**「前後ありオーラ」「前のみ」「後ろのみ」の3種類を一気に処理はできません。** <p style="font-size: 80%;">アプリをリロードしてそれぞれ書き出してください。</p>', unsafe_allow_html=True)
 
-st.write('<br>**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「昇順」でアップされます。<br> そのため、適切に前後パーツを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>前オーラ：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろオーラ：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> とABCそれぞれの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
+st.write('**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「昇順」でアップされます。<br> そのため、適切に前後パーツを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>前オーラ：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろオーラ：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> とABCそれぞれの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
 
 
 
@@ -75,15 +75,21 @@ export_files_bottom_female = sorted(export_files_bottom_female, key=lambda x: x.
 
 
 st.markdown('---')
-st.write('**男女シルエットを選択** <br>100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。', unsafe_allow_html=True)
-# 100×100男女シルエット
-silhouette_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="silhouette_file")
-silhouette_dict = {silhouette_file.name: silhouette_file for silhouette_file in silhouette_files}
 
-# ファイルが選択されていない場合はメッセージを表示する
-if not silhouette_files:
-    st.write('<span style="color:red;">未選択です。シルエットをアップロードしてください。</span>', unsafe_allow_html=True)
-
+col5, _, col6 = st.columns([1, 0.1, 1])  # '_'は空のカラム
+with col5:
+    st.write('**男女シルエット** <p style="font-size: 80%;">100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。</p>', unsafe_allow_html=True)
+    # 100×100男女シルエット
+    silhouette_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="silhouette_file")
+    silhouette_dict = {silhouette_file.name: silhouette_file for silhouette_file in silhouette_files}
+    # ファイルが選択されていない場合はメッセージを表示する
+    if not silhouette_files:
+        st.write('<span style="color:red;">未選択です。シルエットをアップロードしてください。</span>', unsafe_allow_html=True)
+        
+with col6:
+    st.write('**再生マーク** <p style="font-size: 80%;">モーションアバター書き出しの際は、再生マークをアップロードしてください。<br><br><br></p>', unsafe_allow_html=True)
+    # 100×100再生マーク　わすれてた
+    playmark_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="playmark_file")
 
 st.markdown('---')
 st.write('**320/640調整用** ', unsafe_allow_html=True)
@@ -134,6 +140,10 @@ with export_button1:
                         silhouette_image = Image.open(silhouette_dict["シルエット_男性.png"])
                     else:
                         silhouette_image = Image.open(silhouette_dict["シルエット_女性.png"])
+                    
+                    # 再生マーク
+                    if playmark_files:  
+                         playmark_image = Image.open(playmark_files[0]).convert("RGBA")  
 
                     
                     # ちょっと縮小する　AI生成
@@ -179,6 +189,9 @@ with export_button1:
                     # 統合する
                     final_image = Image.alpha_composite(image_bottom.convert("RGBA"), silhouette_image.convert("RGBA"))
                     b_image = Image.alpha_composite(final_image.convert("RGBA"), image_top.convert("RGBA"))
+
+                    if playmark_files:
+                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))  
                     
                     # ファイル名を設定する
                     if export_file_top:
@@ -422,8 +435,11 @@ with export_selected_button1:
                         silhouette_image = Image.open(silhouette_dict["シルエット_男性.png"])
                     else:
                         silhouette_image = Image.open(silhouette_dict["シルエット_女性.png"])
+                        
+                    # 再生マーク
+                    if playmark_files:  
+                         playmark_image = Image.open(playmark_files[0]).convert("RGBA")  
 
-                    
                     # ちょっと縮小する　AI生成
                     scale = 0.93
                     for image in [image_top, image_bottom]:
@@ -467,6 +483,9 @@ with export_selected_button1:
                     # 統合する
                     final_image = Image.alpha_composite(image_bottom.convert("RGBA"), silhouette_image.convert("RGBA"))
                     b_image = Image.alpha_composite(final_image.convert("RGBA"), image_top.convert("RGBA"))
+                    
+                    if playmark_files:
+                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA")) 
                     
                     # ファイル名を設定する
                     if export_file_top:
