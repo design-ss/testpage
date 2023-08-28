@@ -36,7 +36,7 @@ st.set_page_config(page_title='mm体書き出し')
 
 st.title('mm体書き出し')
 
-st.write('**通常素体のポーズで書き出すときは「作成した体＝体前」「素体＝体後ろ」で読み込ませてください。** <p style="font-size: 80%;">アプリをリロードしてそれぞれ書き出してください。</p>', unsafe_allow_html=True)
+st.write('**通常素体のポーズで書き出すときは「作成した体＝体前 or 体_中」「素体＝体後ろ」で読み込ませてください。** <p style="font-size: 80%;">素体のファイル名は「素体_男.png」「素体_女.png」から変更しないでください。</p>', unsafe_allow_html=True)
 
 st.write('**ID付与前に複数構造のものを書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「昇順」でアップされます。<br> そのため、適切に前後パーツを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>前オーラ：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろオーラ：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> とABCそれぞれの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
 
@@ -218,10 +218,10 @@ with export_button1:
                         masked_image_center = masked_image_center.resize((960, 640))
                         if file_center:
                             binary_dict["/960x640/" + file_center.name] = masked_image_center
-                    if file_back:
+                    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
                         image_back = image_back.resize((960, 640))
                         binary_dict["/960x640/" + file_back.name] = image_back
-    
+
                     
 
                     # 統合する
@@ -511,9 +511,10 @@ with export_selected_button1:
                         masked_image_center = masked_image_center.resize((960, 640))
                         if file_center:
                             binary_dict["/960x640/" + file_center.name] = masked_image_center
-                    if file_back:
+                    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
                         image_back = image_back.resize((960, 640))
                         binary_dict["/960x640/" + file_back.name] = image_back
+
                     
 
                     # 統合する
