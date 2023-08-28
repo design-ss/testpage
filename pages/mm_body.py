@@ -44,15 +44,15 @@ col1, col2 , col3 = st.columns(3)
 
 # 前ファイル指定
 with col1:
-    export_files_front = st.file_uploader("体_前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_front")
+    export_files_front = st.file_uploader("**体_前ファイル**", type='png', accept_multiple_files=True, key="export_files_front")
 
 # 中ファイル指定
 with col2:
-    export_files_center = st.file_uploader("体_中ファイルを選択", type='png', accept_multiple_files=True, key="export_files_center")
+    export_files_center = st.file_uploader("**体_中ファイル**", type='png', accept_multiple_files=True, key="export_files_center")
 
 # 後ろファイル指定
 with col3:
-    export_files_back = st.file_uploader("体_後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_back")
+    export_files_back = st.file_uploader("**体_後ろファイル**", type='png', accept_multiple_files=True, key="export_files_back")
     
 # ファイル名を昇順に並び替える　ローカルでは選択順にアップされるが、クラウド上ではなぜかバラバラになるので制御するために昇順に
 export_files_front = sorted(export_files_front, key=lambda x: x.name)
