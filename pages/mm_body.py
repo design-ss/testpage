@@ -73,7 +73,7 @@ with col5:
     
     
 st.markdown('---')
-st.write('**320/640調整用** ', unsafe_allow_html=True)
+st.write('**50/100調整用** ', unsafe_allow_html=True)
 # パラメータ調整スライダー 
 vertical_shift = st.slider('下移動⇔上移動', min_value=-100, max_value=100, value=0)
 horizontal_shift = st.slider('左移動⇔右移動', min_value=-100, max_value=100, value=0)
