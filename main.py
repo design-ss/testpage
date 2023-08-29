@@ -12,11 +12,14 @@ st.markdown(
     '③pngファイルをアップロード<br>'
     '④ボタンを押して書き出し<br>'
     '⑤zipをダウンロード<br>'
-    '⑥※zipを解凍'
+    '⑥zipを解凍※1<br>'
+    '⑦Pngyuで圧縮する※2<br>'
     '</p>'
-    '<p style="font-size: 80%; margin-top: -10px;">'
-    '　　※Windowsでデフォルトの解凍を使うとエラーが出ます。7-Zipなどの解凍ソフトを使用してください。<br>'
-    '　　　7-Zip https://7-zip.opensource.jp/'
+     '<p style="font-size: 80%; margin-top: -10px;">'
+    '　　※1　Windowsでデフォルトの解凍を使うとエラーが出ます。7-Zipなどの解凍ソフトを使用してください。<br>'
+    '　　　　 7-Zip https://7-zip.opensource.jp/<br>'
+     '　　※2　Pngyu https://nukesaq88.github.io/Pngyu/ja.html<br>'
+    '　　　　  Macで稀にPngyuが使えないことがあるようです。その場合はお知らせください。'
     '</p>',
     unsafe_allow_html=True
 )
@@ -36,7 +39,7 @@ st.markdown('---')
 
 st.markdown(
     '<p style="line-height: 1.5;">'
-    '・Photoshopが動かない、大量に同じ種類のものを書き出す時などにお使いください<br>'
+    '・Photoshopが動かない、大量に同じ種類のものを書き出す時などにお使いください。<br>'
      '・Pythonの知識がある方、ローカルで動かせる方はzipファイルを生成せずに、直接ローカルに書き出しできます。githubお渡しするので、書き出し先にローカルパスを指定し、必要モジュールインストールのうえ動かしてください。<br>'
     '</p>',
     unsafe_allow_html=True
