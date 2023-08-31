@@ -41,29 +41,31 @@ st.write('**「前後ありオーラ」「前のみ」「後ろのみ」の3種�
 st.write('**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「昇順」でアップされます。<br> そのため、適切に前後パーツを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>前オーラ：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろオーラ：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> とABCそれぞれの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
 
 
+
+
 col1, col2 = st.columns(2)
 
-col1, col2 = st.columns([1, 1])  # '_'は空のカラム
+col1, _, col2 = st.columns([1, 0.1, 1])  # '_'は空のカラム
 
 # 男オーラ前ファイル指定
 with col1:
-    export_files_top_male = st.file_uploader("**男性用オーラ前** ", type='png', accept_multiple_files=True, key="export_files_top_male")
-    
-# 男オーラ後ろファイル指定
-with col2:
-    export_files_bottom_male = st.file_uploader("**男性用オーラ後ろ**", type='png', accept_multiple_files=True, key="export_files_bottom_male")
-    
-st.markdown('---')
-
-col3, col4 = st.columns([1, 1]) 
+    export_files_top_male = st.file_uploader("男性用オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_top_male")
 
 # 女オーラ前ファイル指定
+with col2:
+    export_files_top_female = st.file_uploader("女性用オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_top_female")
+
+
+col3, _, col4 = st.columns([1, 0.1, 1])  # '_'は空のカラム
+
+# 男オーラ後ろファイル指定
 with col3:
-    export_files_top_female = st.file_uploader("**女性用オーラ前**", type='png', accept_multiple_files=True, key="export_files_top_female")
+    export_files_bottom_male = st.file_uploader("男性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_male")
+
 
 # 女オーラ後ろファイル指定
 with col4:
-    export_files_bottom_female = st.file_uploader("**女性用オーラ後ろ**", type='png', accept_multiple_files=True, key="export_files_bottom_female")
+    export_files_bottom_female = st.file_uploader("女性用オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_bottom_female")
     
 # ファイル名を昇順に並び替える
 export_files_top_male = sorted(export_files_top_male, key=lambda x: x.name)
@@ -74,7 +76,7 @@ export_files_bottom_female = sorted(export_files_bottom_female, key=lambda x: x.
 
 st.markdown('---')
 
-col5, col6 = st.columns([1, 1]) 
+col5, _, col6 = st.columns([1, 0.1, 1])  # '_'は空のカラム
 with col5:
     st.write('**男女シルエット** <p style="font-size: 80%;">100×100男女シルエット画像をアップロードしてください。<br>「シルエット_男性.png」「シルエット_女性.png」から名前を変更しないでください。</p>', unsafe_allow_html=True)
     # 100×100男女シルエット
@@ -85,7 +87,7 @@ with col5:
         st.write('<span style="color:red;">未選択です。シルエットをアップロードしてください。</span>', unsafe_allow_html=True)
         
 with col6:
-    st.write('**再生マーク** <p style="font-size: 80%;">モーションアバター書き出しの際は、再生マークをアップロードしてください。<br><br></p>', unsafe_allow_html=True)
+    st.write('**再生マーク** <p style="font-size: 80%;">モーションアバター書き出しの際は、再生マークをアップロードしてください。<br><br><br></p>', unsafe_allow_html=True)
     # 100×100再生マーク　わすれてた
     playmark_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="playmark_file")
 
@@ -268,6 +270,8 @@ with export_button1:
                     pad_height = 640 - height - up
                     padding = (pad_width_left, pad_height, pad_width_right, up)
                     d_image = ImageOps.expand(image, padding)
+                    
+                    d_image = d_image.resize((640, 640))
                     
                     # 320×320を生成
                     c_image = d_image.resize((320, 320))
@@ -562,6 +566,8 @@ with export_selected_button1:
                     pad_height = 640 - height - up
                     padding = (pad_width_left, pad_height, pad_width_right, up)
                     d_image = ImageOps.expand(image, padding)
+                    
+                    d_image = d_image.resize((640, 640))
                     
                     # 320×320を生成
                     c_image = d_image.resize((320, 320))
