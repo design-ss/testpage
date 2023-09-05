@@ -137,11 +137,11 @@ with export_button1:
                                             int(finalimg_np.shape[1] / 2 - width / 2):int(finalimg_np.shape[1] / 2 + width / 2)]
                     final_image = Image.fromarray(finalimg_np)
 
-                    # リサイズする 両端切る
-                    final_image = final_image.crop((315 - horizontal_shift, 0 + vertical_shift, 645 - horizontal_shift, 640+ vertical_shift))
+                    # リサイズする 非対称
+                    final_image = final_image.crop((315 - horizontal_shift, 0 + vertical_shift, 605 - horizontal_shift, 640+ vertical_shift))
                     final_image = final_image.resize((290, 640), Image.LANCZOS)
 
-                    # 正方形にする　350px分消し去りたい　
+                    # 正方形にする　
                     start_y = 640 - 290 - 65 
                     end_y = start_y + 290
                     b_image = final_image.crop((0, start_y, 290, end_y))
@@ -285,7 +285,7 @@ with st.spinner("画像生成中です..."):
                     final_image = Image.fromarray(finalimg_np)
 
                     # リサイズする 両端切る
-                    final_image = final_image.crop((315 - horizontal_shift, 0 + vertical_shift, 645 - horizontal_shift, 640+ vertical_shift))
+                    final_image = final_image.crop((315 - horizontal_shift, 0 + vertical_shift, 605 - horizontal_shift, 640+ vertical_shift))
                     final_image = final_image.resize((290, 640), Image.LANCZOS)
 
                     # 正方形にする　350px分消し去りたい　
@@ -375,7 +375,7 @@ with export_selected_button1:
                     final_image = Image.fromarray(finalimg_np)
 
                     # リサイズする 両端切る
-                    final_image = final_image.crop((315 - horizontal_shift, 0 + vertical_shift, 645 - horizontal_shift, 640+ vertical_shift))
+                    final_image = final_image.crop((315 - horizontal_shift, 0 + vertical_shift, 605 - horizontal_shift, 640+ vertical_shift))
                     final_image = final_image.resize((290, 640), Image.LANCZOS)
 
                     # 正方形にする　350px分消し去りたい　
