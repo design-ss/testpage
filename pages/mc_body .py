@@ -440,16 +440,19 @@ with export_selected_button1:
                     # 画像を読み込む
                     if file_front:
                         image_front = Image.open(file_front).convert("RGBA")
+                        image_front = image_front.resize((960, 640))
                     else:
                         image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
                     if file_center:
                         image_center = Image.open(file_center).convert("RGBA")
+                        image_center = image_center.resize((960, 640))
                     else:
                         image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
                     if file_back:
                         image_back = Image.open(file_back).convert("RGBA")
+                        image_back = image_back.resize((960, 640))
                     else:
                         image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
                         
@@ -523,53 +526,6 @@ with export_selected_button1:
                     # 50 × 50保存
                     b_image = b_image.resize((50, 50))
                     binary_dict["/50x50/" + file_name] = b_image
-
-
-                    ####################################
-
-                    #　640 × 640、320 ×　320　のリサイズ
-
-                    ####################################
-                    # 画像を読み込む
-                    if file_front:
-                        image_front = Image.open(file_front).convert("RGBA")
-                    else:
-                        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-                    if file_center:
-                        image_center = Image.open(file_center).convert("RGBA")
-                    else:
-                        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-                    if file_back:
-                        image_back = Image.open(file_back).convert("RGBA")
-                    else:
-                        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-                        
-                    # 960×640
-                    # 顔輪郭マスクあったら image_centerを書き換え
-                    # if mask_file:
-                    #     mask_image = Image.open(mask_file[0]).convert('L')
-                    #     image = np.array(image_center)
-                    #     mask = np.array(mask_image)
-                    #     # アンチエイリアス処理
-                    #     image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
-                    #     image_center = Image.fromarray(image)
-
-                    if file_front:
-                        image_front = image_front.resize((960, 640))
-                        binary_dict["/960x640/" + file_front.name] = image_front
-                    if file_center:
-                        image_center = image_center.resize((960, 640))
-                        if file_center:
-                            binary_dict["/960x640/" + file_center.name] = image_center
-                    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
-                        image_back = image_back.resize((960, 640))
-                        binary_dict["/960x640/" + file_back.name] = image_back
-
-                    # 統合する
-                    image = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
-                    image = Image.alpha_composite(image.convert("RGBA"), image_front.convert("RGBA"))
 
 
                     ####################################
