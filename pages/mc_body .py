@@ -462,7 +462,7 @@ with export_selected_button1:
                     if head_file:  
                         image_head = Image.open(head_file[0]).convert("RGBA") 
                         image_center = Image.alpha_composite(image_center.convert("RGBA"), image_head.convert("RGBA"))
-
+                                             
                     # 960×640
                     # # 顔輪郭マスクあったら image_centerを書き換え
                     # if mask_file:
@@ -473,12 +473,13 @@ with export_selected_button1:
                     #     image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
                     #     image_center = Image.fromarray(image)
   
+                    
                     # 統合
                     combined_center_back = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
                     final_image = Image.alpha_composite(combined_center_back, image_front.convert("RGBA"))
 
                     # ちょっと縮小する　AI生成
-                    scale = 0.96
+                    scale = scale_100 
                     width, height = final_image.size
                     new_width, new_height = int(width * scale), int(height * scale)
                     x1, y1 = width // 2, height // 2
@@ -505,13 +506,12 @@ with export_selected_button1:
                     end_y = start_y + 290
                     b_image = final_image.crop((0, start_y, 290, end_y))
 
-
                     # 縮小する
                     b_image.thumbnail((100,100), Image.LANCZOS)
-
+                    
                     #属性を統合する 
                     b_image.paste(attribution, (0, 0), attribution)       
-                    
+                      
                     # ファイル名を設定する
                     if file_front:
                         file_name = file_front.name
@@ -526,7 +526,6 @@ with export_selected_button1:
                     # 50 × 50保存
                     b_image = b_image.resize((50, 50))
                     binary_dict["/50x50/" + file_name] = b_image
-
 
                     ####################################
 
