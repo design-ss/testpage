@@ -295,7 +295,7 @@ with export_button1:
                     binary_dict["/320x320/" + file_name] = c_image
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
-        show_zip_download("mm_body.zip", binary_dict)
+        show_zip_download("mc_body.zip", binary_dict)
     st.write('全てのファイルを書き出します。')
 st.markdown('---')
 
@@ -627,5 +627,5 @@ with export_selected_button1:
                     binary_dict["/320x320/" + file_name] = c_image
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
-        show_zip_download("mm_body2.zip", binary_dict)
+        show_zip_download("mc_body2.zip", binary_dict)
     st.write('チェックを入れたファイルを書き出します。')
