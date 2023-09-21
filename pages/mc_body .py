@@ -38,9 +38,8 @@ st.set_page_config(page_title='mc体書き出し')
 
 st.title('mc見た目体書き出し')
 
-st.write('**通常素体のポーズはこちらのアプリでは書き出しできません。default bodyを使ってください。** ', unsafe_allow_html=True)
-
-st.write('**ID付与前に複数構造のものを書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「昇順」でアップされます。<br> そのため、適切に前後パーツを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>前体：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろ体：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> とABCそれぞれの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
+# st.write('**ID付与前に複数構造のものを書き出す場合はお気をつけください。** <p style="font-size: 80%;"></p>', unsafe_allow_html=True)
+st.write('**「前後ありオーラ」「前のみ」「後ろのみ」の3種類を一気に処理はできません。** <p style="font-size: 80%;">アプリをリロードしてそれぞれ書き出してください。<br><br><br></p>', unsafe_allow_html=True)
 
 col1, col2 , col3 = st.columns(3)
 
@@ -65,7 +64,8 @@ col4 , col5 = st.columns(2)
 
 with col4:
     # 属性ファイル
-    attribution_file = st.file_uploader("属性を選択", type='png', accept_multiple_files=False, key="attribution_file")
+    st.write('**属性**<br><br><br><br>', unsafe_allow_html=True)
+    attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
 
 with col5:
     st.write('**頭**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「頭素体.png」をアップロードしてください。</p>', unsafe_allow_html=True)
