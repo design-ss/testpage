@@ -68,7 +68,7 @@ with col4:
     attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
 
 with col5:
-    st.write('**頭**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「頭素体.png」をアップロードしてください。</p>', unsafe_allow_html=True)
+    st.write('**頭**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「mc_頭素体.png」をアップロードしてください。</p>', unsafe_allow_html=True)
     # 頭素体
     head_file= st.file_uploader("選択", type='png', accept_multiple_files=True, key="head_file")
 
