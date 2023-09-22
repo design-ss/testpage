@@ -38,9 +38,15 @@ st.title('mcペット書き出し')
 # 書き出しファイル
 export_files = st.file_uploader("ファイルを選択", type='png', accept_multiple_files=True, key="export_files")
 
+# ファイル名を昇順に並び替える　ローカルでは選択順にアップされるが、クラウド上ではなぜかバラバラになるので制御するために昇順に
+export_files = sorted(export_files, key=lambda x: x.name)
+
 st.write('属性画像はローカルからアップロードお願いします。トレロに全属性画像のフォルダを記載してます。')
 # 属性ファイル
 attribution_file = st.file_uploader("属性を選択", type='png', accept_multiple_files=False, key="attribution_file")
+# ファイルが選択されていない場合はメッセージを表示する
+if not attribution_file:
+    st.write('<span style="color:red;">未選択です。属性画像をアップロードしてください。</span>', unsafe_allow_html=True)
 
 
 # パターン1説明
@@ -199,7 +205,11 @@ if vertical_shift or horizontal_shift or scale  or preview_button1:
 
                 ####################################
                 image = Image.open(export_file)
-                attribution = Image.open(attribution_file)
+               
+                try:
+                    attribution = Image.open(attribution_file)
+                except AttributeError:
+                    st.error('属性ファイルをアップしてください。')
 
                 # 不要な透明部分削除
                 image = image.crop(image.getbbox())
