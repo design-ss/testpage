@@ -66,6 +66,9 @@ with col4:
     # 属性ファイル
     st.write('**属性**<br><br><br><br>', unsafe_allow_html=True)
     attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
+    # ファイルが選択されていない場合はメッセージを表示する
+    if not attribution_file:
+        st.write('<span style="color:red;">未選択です。属性画像をアップロードしてください。</span>', unsafe_allow_html=True)
 
 with col5:
     st.write('**頭**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「mc_頭素体.png」をアップロードしてください。</p>', unsafe_allow_html=True)
@@ -339,8 +342,12 @@ with st.spinner("画像生成中です..."):
             image_back = image_back.resize((960, 640))
         else:
             image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-                     
-        attribution = Image.open(attribution_file)
+        
+        try:
+            attribution = Image.open(attribution_file)
+        except AttributeError:
+            st.error('属性ファイルをアップしてください。')
+
         
         #頭素体あったら開く
         if head_file:  
