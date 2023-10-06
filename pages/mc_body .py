@@ -64,14 +64,15 @@ col4 , col5 = st.columns(2)
 
 with col4:
     # 属性ファイル
-    st.write('**属性**<br><br><br><br>', unsafe_allow_html=True)
+    st.write('**属性**<span style="color:red; font-size: 80%;">　※必須</span>', unsafe_allow_html=True)
+    st.write('<span style="font-size: 80%;">属性画像はローカルからアップロードお願いします。トレロに全属性画像のフォルダを記載してます。</span>', unsafe_allow_html=True)
     attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
     # ファイルが選択されていない場合はメッセージを表示する
     if not attribution_file:
         st.write('<span style="color:red;">未選択です。属性画像をアップロードしてください。</span>', unsafe_allow_html=True)
 
 with col5:
-    st.write('**頭**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「mc_頭素体.png」をアップロードしてください。</p>', unsafe_allow_html=True)
+    st.write('**頭**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「mc_頭素体.png」をアップロードしてください。<br></p>', unsafe_allow_html=True)
     # 頭素体
     head_file= st.file_uploader("選択", type='png', accept_multiple_files=True, key="head_file")
 
@@ -80,8 +81,8 @@ with col5:
 st.markdown('---')
 st.write('**50/100調整用** ', unsafe_allow_html=True)
 # パラメータ調整スライダー 
-vertical_shift = st.slider('下移動⇔上移動', min_value=-100, max_value=100, value=0)
-horizontal_shift = st.slider('左移動⇔右移動', min_value=-100, max_value=100, value=0)
+vertical_shift = st.slider('下移動⇔上移動', min_value=-150, max_value=150, value=0)
+horizontal_shift = st.slider('左移動⇔右移動', min_value=-150, max_value=150, value=0)
 scale_100 = st.slider('縮小⇔拡大　デフォルトは0.75', min_value=0.5, max_value=1.5, value=0.75)
 
 
