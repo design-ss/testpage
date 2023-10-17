@@ -38,11 +38,9 @@ st.title('mmペット書き出し')
 # ファイルアップローダー
 export_files = st.file_uploader("ファイルを選択", type='png', accept_multiple_files=True, key="export_files")
 
-# パターン1説明
-st.write('100/50の見た目の中心を取って配置します。スライダーで調整できます。')
-
 
 # パラメータ調整スライダー
+st.write('**50/100調整用** 　　320/640で調整が必要な場合はpsdでの書き出しで対応してください。', unsafe_allow_html=True)
 vertical_shift = st.slider('下移動⇔上移動', min_value=-30, max_value=30, value=0)
 horizontal_shift = st.slider('左移動⇔右移動', min_value=-30, max_value=30, value=0)
 scale = st.slider('縮小⇔拡大', min_value=0.0, max_value=2.0, value=0.7)
