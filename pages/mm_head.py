@@ -68,7 +68,7 @@ playmark_files = st.file_uploader("選択", type='png', accept_multiple_files=Tr
 
     
 st.markdown('---')
-st.write('**320/640調整用** ', unsafe_allow_html=True)
+st.write('**320/640調整用** 50/100で調整が必要な場合はpsdでの書き出しで対応してください。', unsafe_allow_html=True)
 # パラメータ調整スライダー 
 vertical_shift = st.slider('下移動⇔上移動', min_value=-320, max_value=320, value=0)
 horizontal_shift = st.slider('左移動⇔右移動', min_value=-320, max_value=320, value=0)
