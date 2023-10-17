@@ -59,7 +59,7 @@ export_files_back = sorted(export_files_back, key=lambda x: x.name)
 
 st.write('**再生マーク**<p style="font-size: 80%;">'
          'モーションアバター書き出しの際は、再生マークをアップロードしてください。<br>'
-        '現在は50/100に再生マークを載せるだけの機能になっています。'
+        '50/100に再生マークを重ねます。'
         '</p>', 
         unsafe_allow_html=True)
 
