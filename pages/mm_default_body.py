@@ -56,22 +56,21 @@ with col2:
 default_pose_male = sorted(default_pose_male, key=lambda x: x.name)
 default_pose_female  = sorted(default_pose_female , key=lambda x: x.name)
 
-col4 , col5 = st.columns(2)
 
-with col4:
-    st.write('**素体ファイル<br>** <p style="font-size: 80%;">「素体_男.png」「素体_女.png」から名前を変更しないでください。<br></p>', unsafe_allow_html=True)
-    # 素体
-    default_bodys = st.file_uploader("選択", type='png', accept_multiple_files=True, key="default_body")
-    default_body_dict = {default_body.name: default_body for default_body in default_bodys}
-    
-with col5:
-    st.write('**再生マーク**<p style="font-size: 80%;">モーションアバター書き出しの際は、再生マークをアップロードしてください。</p>', unsafe_allow_html=True)
-    # 100×100再生マーク
-    playmark_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="playmark_file")
+st.write('**素体ファイル<br>** <p style="font-size: 80%;">「素体_男.png」「素体_女.png」から名前を変更しないでください。<br></p>', unsafe_allow_html=True)
+# 素体
+default_bodys = st.file_uploader("選択", type='png', accept_multiple_files=True, key="default_body")
+default_body_dict = {default_body.name: default_body for default_body in default_bodys}
+
+# with col5:
+#     st.write('**再生マーク**<p style="font-size: 80%;">モーションアバター書き出しの際は、再生マークをアップロードしてください。</p>', unsafe_allow_html=True)
+#     # 100×100再生マーク
+#     playmark_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="playmark_file")
 
     
 st.markdown('---')
-st.write('**50/100調整用** ', unsafe_allow_html=True)
+st.write('**50/100調整用** 　　320/640で調整が必要な場合はpsdでの書き出しで対応してください。', unsafe_allow_html=True)
+st.write('<span style="color:red;">特殊な形状の時以外は調整不要です！</span>', unsafe_allow_html=True)
 # パラメータ調整スライダー 
 vertical_shift = st.slider('下移動⇔上移動', min_value=-100, max_value=100, value=0)
 horizontal_shift = st.slider('左移動⇔右移動', min_value=-100, max_value=100, value=0)
@@ -104,9 +103,9 @@ with export_button1:
                     # 画像を読み込む
                     default_pose_image = Image.open(default_pose_file).convert("RGBA") 
 
-                    # 再生マークあったら開く
-                    if playmark_files:
-                        playmark_image = Image.open(playmark_files[0]).convert("RGBA")
+                    # # 再生マークあったら開く
+                    # if playmark_files:
+                    #     playmark_image = Image.open(playmark_files[0]).convert("RGBA")
 
                     # 男女画像 
                     if default_pose_file in default_pose_male:
@@ -149,9 +148,9 @@ with export_button1:
                     # 縮小する
                     b_image.thumbnail((100,100), Image.LANCZOS)
                     
-                    # 再生マークあったら統合する
-                    if playmark_files:
-                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))   
+                    # # 再生マークあったら統合する
+                    # if playmark_files:
+                    #     b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))   
                     
                     # ファイル名を設定する
                     file_name = default_pose_file.name
@@ -251,9 +250,9 @@ with st.spinner("画像生成中です..."):
                      # 画像を読み込む
                     default_pose_image = Image.open(default_pose_file).convert("RGBA") 
 
-                    # 再生マークあったら開く
-                    if playmark_files:
-                        playmark_image = Image.open(playmark_files[0]).convert("RGBA")
+                    # # 再生マークあったら開く
+                    # if playmark_files:
+                    #     playmark_image = Image.open(playmark_files[0]).convert("RGBA")
 
                     # 男女画像 
                     if default_pose_file in default_pose_male:
@@ -341,9 +340,9 @@ with export_selected_button1:
                     # 画像を読み込む
                     default_pose_image = Image.open(default_pose_file).convert("RGBA") 
 
-                    # 再生マークあったら開く
-                    if playmark_files:
-                        playmark_image = Image.open(playmark_files[0]).convert("RGBA")
+                    # # 再生マークあったら開く
+                    # if playmark_files:
+                    #     playmark_image = Image.open(playmark_files[0]).convert("RGBA")
 
                     # 男女画像 
                     if default_pose_file in default_pose_male:
@@ -386,9 +385,9 @@ with export_selected_button1:
                     # 縮小する
                     b_image.thumbnail((100,100), Image.LANCZOS)
                     
-                    # 再生マークあったら統合する
-                    if playmark_files:
-                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))   
+                    # # 再生マークあったら統合する
+                    # if playmark_files:
+                    #     b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))   
                     
                     # ファイル名を設定する
                     file_name = default_pose_file.name

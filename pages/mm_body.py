@@ -69,16 +69,20 @@ with col4:
     mask_file = st.file_uploader("選択", type='png', accept_multiple_files=True, key="mask_file")
 
 with col5:
-    st.write('**再生マーク**<p style="font-size: 80%;">モーションアバター書き出しの際は、再生マークをアップロードしてください。<br><br><br><br></p>', unsafe_allow_html=True)
+    st.write('**再生マーク**<p style="font-size: 80%;">'
+         'モーションアバター書き出しの際は、再生マークをアップロードしてください。<br>'
+        '50/100に再生マークを重ねます。'
+        '</p>', 
+        unsafe_allow_html=True)
     # 100×100再生マーク
     playmark_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="playmark_file")
     
     
 st.markdown('---')
-st.write('**50/100調整用** ', unsafe_allow_html=True)
+st.write('**50/100調整用** 　　320/640で調整が必要な場合はpsdでの書き出しで対応してください。', unsafe_allow_html=True)
 # パラメータ調整スライダー 
-vertical_shift = st.slider('下移動⇔上移動', min_value=-100, max_value=100, value=0)
-horizontal_shift = st.slider('左移動⇔右移動', min_value=-100, max_value=100, value=0)
+vertical_shift = st.slider('下移動⇔上移動', min_value=-150, max_value=150,value=0)
+horizontal_shift = st.slider('左移動⇔右移動', min_value=-150, max_value=150,value=0)
 scale_100 = st.slider('縮小⇔拡大　デフォルトは0.96', min_value=0.5, max_value=1.5, value=0.96)
 
 
@@ -163,7 +167,7 @@ with export_button1:
                     final_image = final_image.resize((290, 640), Image.LANCZOS)
 
                     # 正方形にする　350px分消し去りたい　
-                    start_y = 640 - 290 - 75 
+                    start_y = 640 - 290 - 75  #290はトリミングサイズ、75は下からの高さ
                     end_y = start_y + 290
                     b_image = final_image.crop((0, start_y, 290, end_y))
 

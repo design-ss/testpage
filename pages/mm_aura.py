@@ -82,17 +82,21 @@ with col5:
     # 100×100男女シルエット
     silhouette_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="silhouette_file")
     silhouette_dict = {silhouette_file.name: silhouette_file for silhouette_file in silhouette_files}
-    # ファイルが選択されていない場合はメッセージを表示する
+    # ファイルがないときメッセージを表示する
     if not silhouette_files:
         st.write('<span style="color:red;">未選択です。シルエットをアップロードしてください。</span>', unsafe_allow_html=True)
         
 with col6:
-    st.write('**再生マーク** <p style="font-size: 80%;">モーションアバター書き出しの際は、再生マークをアップロードしてください。<br><br><br></p>', unsafe_allow_html=True)
+    st.write('**再生マーク**<p style="font-size: 80%;">'
+         'モーションアバター書き出しの際は、再生マークをアップロードしてください。<br>'
+        '50/100に再生マークを重ねます。'
+        '</p>', 
+        unsafe_allow_html=True)
     # 100×100再生マーク　わすれてた
     playmark_files = st.file_uploader("選択", type='png', accept_multiple_files=True, key="playmark_file")
 
 st.markdown('---')
-st.write('**320/640調整用** ', unsafe_allow_html=True)
+st.write('**320/640調整用** 　　50/100で調整が必要な場合はpsdでの書き出しで対応してください。', unsafe_allow_html=True)
 # パラメータ調整スライダー 
 vertical_shift = st.slider('下移動⇔上移動', min_value=-320, max_value=320, value=0)
 horizontal_shift = st.slider('左移動⇔右移動', min_value=-320, max_value=320, value=0)
@@ -566,7 +570,6 @@ with export_selected_button1:
                     pad_height = 640 - height - up
                     padding = (pad_width_left, pad_height, pad_width_right, up)
                     d_image = ImageOps.expand(image, padding)
-                    
                     d_image = d_image.resize((640, 640))
                     
                     # 320×320を生成
