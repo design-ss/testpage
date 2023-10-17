@@ -25,15 +25,18 @@ def show_zip_download(file_name, target_dict):
 st.set_page_config(page_title='mcフレーム書き出し')
 
 st.title('mcフレーム書き出し')
-
-st.write('複数のファイルを同時に書き出しする時は、選択順に気を付けてください。\n\n（例）\n\n【アイコン1、アイコン2、アイコン3】と選んだときは\n\n【ギルド1、ギルド2、ギルド3】と対応するフレームを同じ順で選択してください。')
-
+st.write('**ID付与前に「複数枚同時に」書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「名前の昇順」でアップされます。<br> そのため、適切にフレームを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>アイコンフレーム：「001.男_アイコンフレーム」「002.女_アイコンフレーム」<br>ギルドフレーム：「003.男_ギルドフレーム」「004.女_ギルドフレーム」<br> とそれぞれ対応するフレームの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
 
 # アイコンフレームファイル指定
 export_files_iconframe = st.file_uploader("アイコンフレームファイルを選択", type='png', accept_multiple_files=True, key="export_files_iconframe")
 
 # ギルドフレームファイル指定
 export_files_guildframe = st.file_uploader("ギルドフレームファイルを選択", type='png', accept_multiple_files=True, key="export_files_guildframe")
+
+# ファイル名を昇順に並び替える
+export_files_iconframe = sorted(export_files_iconframe, key=lambda x: x.name)
+export_files_guildframe = sorted(export_files_guildframe, key=lambda x: x.name)
+
 
 # 一括書き出しと個別書き出し
 export_button1, export_selected_button1 = st.columns(2)

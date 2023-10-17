@@ -38,14 +38,16 @@ st.title('mcオーラ書き出し')
 
 
 # オーラ前ファイル指定
-export_files_front = st.file_uploader("オーラ前ファイルを選択", type='png', accept_multiple_files=True, key="export_files_front")
+export_files_front = st.file_uploader("**オーラ前**", type='png', accept_multiple_files=True, key="export_files_front")
 
 # オーラ後ろファイル指定
-export_files_back = st.file_uploader("オーラ後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_back")
+export_files_back = st.file_uploader("**オーラ後ろ**", type='png', accept_multiple_files=True, key="export_files_back")
 
-st.write('属性画像はローカルからアップロードお願いします。トレロに全属性画像のフォルダを記載してます。')
-# 属性ファイル
-attribution_file = st.file_uploader("属性を選択", type='png', accept_multiple_files=False, key="attribution_file")
+# 属性ファイル　
+st.write('**属性**<span style="color:red; font-size: 80%;">　※必須</span>', unsafe_allow_html=True)
+st.write('<span style="font-size: 80%;">属性画像はローカルからアップロードお願いします。トレロに全属性画像のフォルダを記載してます。</span>', unsafe_allow_html=True)
+
+attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
 # ファイルが選択されていない場合はメッセージを表示する
 if not attribution_file:
     st.write('<span style="color:red;">未選択です。属性画像をアップロードしてください。</span>', unsafe_allow_html=True)
