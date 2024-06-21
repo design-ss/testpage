@@ -34,6 +34,159 @@ def getPreviewImage(image, border_size = 1, border_color='red'):
     img_with_border = ImageOps.expand(image, border = border_size, fill=border_color)
     return img_with_border
 
+
+def generate_small_images(file_front, file_center, file_back, playmark_files, mask_file, scale_100, horizontal_shift, vertical_shift):
+    # 画像を読み込む
+    if file_front:
+        image_front = Image.open(file_front).convert("RGBA")
+    else:
+        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if file_center:
+        image_center = Image.open(file_center).convert("RGBA")
+    else:
+        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if file_back:
+        image_back = Image.open(file_back).convert("RGBA")
+    else:
+        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    # 再生マークがあったら読み込む
+    if playmark_files:
+        playmark_image = Image.open(playmark_files[0]).convert("RGBA")
+
+    # 顔輪郭マスクがあったら image_centerを書き換える
+    if mask_file:
+        mask_image = Image.open(mask_file[0]).convert('L')
+        image = np.array(image_center)
+        mask = np.array(mask_image)
+        image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
+        image_center = Image.fromarray(image)
+
+    # 統合
+    combined_center_back = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
+    final_image = Image.alpha_composite(combined_center_back, image_front.convert("RGBA"))
+
+    # 縮小する
+    scale = scale_100
+    width, height = final_image.size
+    new_width, new_height = int(width * scale), int(height * scale)
+    x1, y1 = width // 2, height // 2
+    x2, y2 = int(x1 * scale), int(y1 * scale)
+    size_after = (int(width * scale), int(height * scale))
+    image_np = np.array(final_image)
+    resized_img = cv2.resize(image_np, dsize=size_after)
+    deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
+    deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
+    framey = int(height * scale * 2)
+    framex = int(width * scale * 2)
+    finalimg_np = np.zeros((framey, framex, 4), np.uint8)
+    finalimg_np[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
+                int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
+    finalimg_np = finalimg_np[int(finalimg_np.shape[0] / 2 - height / 2):int(finalimg_np.shape[0] / 2 + height / 2),
+                              int(finalimg_np.shape[1] / 2 - width / 2):int(finalimg_np.shape[1] / 2 + width / 2)]
+    final_image = Image.fromarray(finalimg_np)
+
+    # リサイズしてトリミング
+    final_image = final_image.crop((335 - horizontal_shift, 0 + vertical_shift, 625 - horizontal_shift, 640 + vertical_shift))
+    final_image = final_image.resize((290, 640), Image.LANCZOS)
+
+    # 正方形にする
+    start_y = 640 - 290 - 75
+    end_y = start_y + 290
+    b_image = final_image.crop((0, start_y, 290, end_y))
+
+    # 縮小する
+    b_image.thumbnail((100, 100), Image.LANCZOS)
+
+    # 再生マークがあったら統合する
+    if playmark_files:
+        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))
+
+    # ファイル名
+    if file_front:
+        file_name = file_front.name
+    elif file_center:
+        file_name = file_center.name
+    elif file_back:
+        file_name = file_back.name
+
+    return b_image, file_name
+
+def generate_large_images(file_front, file_center, file_back, mask_file, binary_dict):
+    # 画像を読み込む
+    if file_front:
+        image_front = Image.open(file_front).convert("RGBA")
+    else:
+        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if file_center:
+        image_center = Image.open(file_center).convert("RGBA")
+    else:
+        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if file_back:
+        image_back = Image.open(file_back).convert("RGBA")
+    else:
+        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    # 顔輪郭マスクがあったら image_centerを書き換える
+    if mask_file:
+        mask_image = Image.open(mask_file[0]).convert('L')
+        image = np.array(image_center)
+        mask = np.array(mask_image)
+        image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
+        image_center = Image.fromarray(image)
+
+    # 統合する
+    image = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
+    image = Image.alpha_composite(image.convert("RGBA"), image_front.convert("RGBA"))
+
+    # 画像サイズ調整
+    width, height = image.size
+    if width < height:
+        if width > 640:
+            image = image.resize((448, int(height * 448 / width)))
+        else:
+            image = image.resize((int(width * 640 / height), 640))
+    else:
+        if height > 640:
+            image = image.resize((int(width * 448 / height), 448))
+        else:
+            image = image.resize((640, int(height * 640 / width)))
+
+    # スケール変更 もしプレビュー増やせたらこれも使うので残しておく
+    scale = 1
+    image = image.resize((int(image.width * scale), int(image.height * scale)))
+
+    # 高さが足りない場合、足りない分を上に足す
+    width, height = image.size
+    if height < 640:
+        new_image = Image.new('RGBA', (width, 640), (0, 0, 0, 0))
+        new_image.paste(image, (0, 640 - height))
+        image = new_image
+
+    # 幅が足りない場合、足りない分を両方に足す
+    if width < 640:
+        new_image = Image.new('RGBA', (640, 640), (0, 0, 0, 0))
+        new_image.paste(image, ((640 - width) // 2, 0))
+        image = new_image
+
+    # 640×640の画像を生成
+    d_image = image
+
+    # ファイル名を設定する
+    if file_front:
+        file_name = file_front.name
+    elif file_center:
+        file_name = file_center.name
+    elif file_back:
+        file_name = file_back.name
+
+    return d_image, file_name
+
+
 st.set_page_config(page_title='mm体書き出し')
 
 st.title('mm見た目体書き出し')
@@ -41,7 +194,7 @@ st.title('mm見た目体書き出し')
 st.write('**通常素体のポーズはこちらのアプリでは書き出しできません。default bodyを使ってください。** ', unsafe_allow_html=True)
 
 st.write('**ID付与前に複数構造のものを書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「昇順」でアップされます。<br> そのため、適切に前後パーツを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>前体：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろ体：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> とABCそれぞれの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
-
+st.write('<span style="color:red;">※未圧縮データを使ってください！</span>', unsafe_allow_html=True)
 col1, col2 , col3 = st.columns(3)
 
 # 前ファイル指定
@@ -102,191 +255,74 @@ with export_button1:
             export_files_back += [None] * (max_length - len(export_files_back))
 
             for file_front, file_center, file_back in zip(export_files_front, export_files_center, export_files_back):
-                    # ####################################
+                # ####################################
 
-                    #　50 × 50、100 × 100　のリサイズ
+                #　50 × 50、100 × 100　のリサイズ
 
-                    # ####################################
-                    # 画像を読み込む
-                    if file_front:
-                        image_front = Image.open(file_front).convert("RGBA")
-                    else:
-                        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                # ####################################
+                b_image, file_name = generate_small_images(file_front, file_center, file_back, playmark_files, mask_file, scale_100, horizontal_shift, vertical_shift)
 
-                    if file_center:
-                        image_center = Image.open(file_center).convert("RGBA")
-                    else:
-                        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                # 100 x 100
+                binary_dict["/100x100/" + file_name] = b_image
 
-                    if file_back:
-                        image_back = Image.open(file_back).convert("RGBA")
-                    else:
-                        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                # 50 x 50
+                b_image_50 = b_image.resize((50, 50))
+                binary_dict["/50x50/" + file_name] = b_image_50
+
+                ####################################
+
+                #　640 × 640、320 ×　320　のリサイズ
+
+                ####################################
+                d_image, file_name = generate_large_images(file_front, file_center, file_back, mask_file, binary_dict)
+
+                # 640 x 640 
+                binary_dict["/640x640/" + file_name] = d_image
+
+                # 320 x 320
+                c_image = d_image.resize((320, 320))
+                binary_dict["/320x320/" + file_name] = c_image
+                
+                ####################################
+                
+                #　960 × 640のリサイズ
+
+                ###################################
+                # 画像を読み込む
+                if file_front:
+                    image_front = Image.open(file_front).convert("RGBA")
+                else:
+                    image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+                if file_center:
+                    image_center = Image.open(file_center).convert("RGBA")
+                else:
+                    image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+                if file_back:
+                    image_back = Image.open(file_back).convert("RGBA")
+                else:
+                    image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+                # 顔輪郭マスクがあったら image_centerを書き換える
+                if mask_file:
+                    mask_image = Image.open(mask_file[0]).convert('L')
+                    image = np.array(image_center)
+                    mask = np.array(mask_image)
+                    image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
+                    image_center = Image.fromarray(image)
+
+                if file_front:
+                    image_front = image_front.resize((960, 640))
+                    binary_dict["/960x640/" + file_front.name] = image_front
+                if file_center:
+                    image_center = image_center.resize((960, 640))
+                    binary_dict["/960x640/" + file_center.name] = image_center
+                if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
+                    image_back = image_back.resize((960, 640))
+                    binary_dict["/960x640/" + file_back.name] = image_back
                         
-                    # 再生マークあったら開く
-                    if playmark_files:  
-                         playmark_image = Image.open(playmark_files[0]).convert("RGBA")  
-                         
-                    # 960×640
-                    # 顔輪郭マスクあったら image_centerを書き換え
-                    if mask_file:
-                        mask_image = Image.open(mask_file[0]).convert('L')
-                        image = np.array(image_center)
-                        mask = np.array(mask_image)
-                        # アンチエイリアス処理
-                        image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
-                        image_center = Image.fromarray(image)
-  
-                    
-                    # 統合
-                    combined_center_back = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
-                    final_image = Image.alpha_composite(combined_center_back, image_front.convert("RGBA"))
-
-                    # ちょっと縮小する　AI生成
-                    scale = scale_100 
-                    width, height = final_image.size
-                    new_width, new_height = int(width * scale), int(height * scale)
-                    x1, y1 = width // 2, height // 2
-                    x2, y2 = int(x1 * scale), int(y1 * scale)
-                    size_after = (int(width * scale), int(height * scale))
-                    image_np = np.array(final_image)
-                    resized_img = cv2.resize(image_np, dsize=size_after)
-                    deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-                    deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-                    framey = int(height * scale * 2)
-                    framex = int(width * scale * 2)
-                    finalimg_np = np.zeros((framey, framex, 4), np.uint8)
-                    finalimg_np[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                                int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-                    finalimg_np = finalimg_np[int(finalimg_np.shape[0] / 2 - height / 2):int(finalimg_np.shape[0] / 2 + height / 2),
-                                            int(finalimg_np.shape[1] / 2 - width / 2):int(finalimg_np.shape[1] / 2 + width / 2)]
-                    final_image = Image.fromarray(finalimg_np)
-
-                     # リサイズする 両端切る
-                    final_image = final_image.crop((335 - horizontal_shift, 0 + vertical_shift, 625 - horizontal_shift, 640+ vertical_shift))
-                    final_image = final_image.resize((290, 640), Image.LANCZOS)
-
-                    # 正方形にする　350px分消し去りたい　
-                    start_y = 640 - 290 - 75  #290はトリミングサイズ、75は下からの高さ
-                    end_y = start_y + 290
-                    b_image = final_image.crop((0, start_y, 290, end_y))
-
-                    # 縮小する
-                    b_image.thumbnail((100,100), Image.LANCZOS)
-                    
-                    # 再生マークあったら統合する
-                    if playmark_files:
-                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))   
-                    
-                    # ファイル名を設定する
-                    if file_front:
-                        file_name = file_front.name
-                    elif file_center:
-                        file_name = file_center.name
-                    elif file_back:
-                        file_name = file_back.name
-                    
-                    # 100 × 100保存
-                    binary_dict["/100x100/" + file_name] = b_image
-
-                    # 50 × 50保存
-                    b_image = b_image.resize((50, 50))
-                    binary_dict["/50x50/" + file_name] = b_image
-
-
-                    ####################################
-
-                    #　640 × 640、320 ×　320　のリサイズ
-
-                    ####################################
-                    # 画像を読み込む
-                    if file_front:
-                        image_front = Image.open(file_front).convert("RGBA")
-                    else:
-                        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-                    if file_center:
-                        image_center = Image.open(file_center).convert("RGBA")
-                    else:
-                        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-                    if file_back:
-                        image_back = Image.open(file_back).convert("RGBA")
-                    else:
-                        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-                        
-                    # 960×640
-                    # 顔輪郭マスクあったら image_centerを書き換え
-                    if mask_file:
-                        mask_image = Image.open(mask_file[0]).convert('L')
-                        image = np.array(image_center)
-                        mask = np.array(mask_image)
-                        # アンチエイリアス処理
-                        image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
-                        image_center = Image.fromarray(image)
-
-                    if file_front:
-                        image_front = image_front.resize((960, 640))
-                        binary_dict["/960x640/" + file_front.name] = image_front
-                    if file_center:
-                        image_center = image_center.resize((960, 640))
-                        if file_center:
-                            binary_dict["/960x640/" + file_center.name] = image_center
-                    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
-                        image_back = image_back.resize((960, 640))
-                        binary_dict["/960x640/" + file_back.name] = image_back
-
-                    
-                    # 統合する
-                    image = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
-                    image = Image.alpha_composite(image.convert("RGBA"), image_front.convert("RGBA"))
-
-
-                    width, height = image.size
-                    if width < height:
-                        if width > 640:
-                            image = image.resize((448, int(height * 448 / width)))
-                        else:
-                            image = image.resize((int(width * 640 / height), 640))
-                    else:
-                        if height > 640:
-                            image = image.resize((int(width * 448 / height), 448))
-                        else:
-                            image = image.resize((640, int(height * 640 / width)))
-
-                    # スケール変更 のこしとく
-                    scale = 1
-                    image = image.resize((int(image.width * scale), int(image.height * scale)))
-
-                    # 画像のサイズを取得
-                    width, height = image.size
-
-                    # 高さが足りない場合、足りない分を上に足す
-                    if height < 640:
-                        new_image = Image.new('RGBA', (width, 640), (0, 0, 0, 0))
-                        new_image.paste(image, (0, 640 - height))
-                        d_image = new_image
-
-                    # 幅が足りない場合、足りない分を両方に足す
-                    if width < 640:
-                        new_image = Image.new('RGBA', (640, 640), (0, 0, 0, 0))
-                        new_image.paste(image, ((640 - width) // 2, 0))
-                        d_image = new_image
-                                
-                    # 320×320を生成
-                    c_image = d_image.resize((320, 320))
-                    
-                    # ファイル名を設定する
-                    if file_front:
-                        file_name = file_front.name
-                    elif file_center:
-                        file_name = file_center.name
-                    elif file_back:
-                        file_name = file_back.name
-
-                    # 統合した画像の保存（
-                    binary_dict["/640x640/" + file_name] = d_image
-                    binary_dict["/320x320/" + file_name] = c_image
+                
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
         show_zip_download("mm_body.zip", binary_dict)
@@ -315,76 +351,7 @@ with st.spinner("画像生成中です..."):
         #　50 × 50、100 × 100　のリサイズ
 
         ####################################
-         # 画像を読み込む
-        if file_front:
-            image_front = Image.open(file_front).convert("RGBA")
-        else:
-            image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-        if file_center:
-            image_center = Image.open(file_center).convert("RGBA")
-        else:
-            image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-        if file_back:
-            image_back = Image.open(file_back).convert("RGBA")
-        else:
-            image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-            
-        # 960×640
-        # 顔輪郭マスクあったら image_centerを書き換え
-        if mask_file:
-            mask_image = Image.open(mask_file[0]).convert('L')
-            image = np.array(image_center)
-            mask = np.array(mask_image)
-            # アンチエイリアス処理
-            image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
-            image_center = Image.fromarray(image)
-
-        
-        # 統合
-        combined_center_back = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
-        final_image = Image.alpha_composite(combined_center_back, image_front.convert("RGBA"))
-
-        # ちょっと縮小する　AI生成
-        scale = scale_100 
-        width, height = final_image.size
-        new_width, new_height = int(width * scale), int(height * scale)
-        x1, y1 = width // 2, height // 2
-        x2, y2 = int(x1 * scale), int(y1 * scale)
-        size_after = (int(width * scale), int(height * scale))
-        image_np = np.array(final_image)
-        resized_img = cv2.resize(image_np, dsize=size_after)
-        deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-        deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-        framey = int(height * scale * 2)
-        framex = int(width * scale * 2)
-        finalimg_np = np.zeros((framey, framex, 4), np.uint8)
-        finalimg_np[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                    int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-        finalimg_np = finalimg_np[int(finalimg_np.shape[0] / 2 - height / 2):int(finalimg_np.shape[0] / 2 + height / 2),
-                                int(finalimg_np.shape[1] / 2 - width / 2):int(finalimg_np.shape[1] / 2 + width / 2)]
-        final_image = Image.fromarray(finalimg_np)
-
-        # リサイズする 両端切る
-        final_image = final_image.crop((335 - horizontal_shift, 0 + vertical_shift, 625 - horizontal_shift, 640+ vertical_shift))
-        final_image = final_image.resize((290, 640), Image.LANCZOS)
-
-        # 正方形にする　350px分消し去りたい　
-        start_y = 640 - 290 - 75 
-        end_y = start_y + 290
-        b_image = final_image.crop((0, start_y, 290, end_y))
-
-        # 縮小する
-        b_image.thumbnail((100,100), Image.LANCZOS)
-        
-        # ファイル名を設定する
-        if file_front:
-            file_name = file_front.name
-        elif file_center:
-            file_name = file_center.name
-        elif file_back:
-            file_name = file_back.name
+        b_image, file_name = generate_small_images(file_front, file_center, file_back, playmark_files, mask_file, scale_100, horizontal_shift, vertical_shift)
             
         # サンプルフレームを読み込む
         flame_image = Image.open("./data/100_flame.png")
@@ -407,8 +374,6 @@ with st.spinner("画像生成中です..."):
         
         i += 1
 
-
-
 # 個別書き出し 空のファイルリストはプレビューの中に
 with export_selected_button1:
     if st.button('個別書き出し'):
@@ -421,192 +386,74 @@ with export_selected_button1:
             export_files_back += [None] * (max_length - len(export_files_back))
 
             for file_front, file_center, file_back in selected_files:
-                    # ####################################
+                # ####################################
 
-                    #　50 × 50、100 × 100　のリサイズ
+                #　50 × 50、100 × 100　のリサイズ
 
-                    # ####################################
-                    # 画像を読み込む
-                    if file_front:
-                        image_front = Image.open(file_front).convert("RGBA")
-                    else:
-                        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                # ####################################
+                # 画像を読み込む
+                b_image, file_name = generate_small_images(file_front, file_center, file_back, playmark_files, mask_file, scale_100, horizontal_shift, vertical_shift)
 
-                    if file_center:
-                        image_center = Image.open(file_center).convert("RGBA")
-                    else:
-                        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                # 100 x 100
+                binary_dict["/100x100/" + file_name] = b_image
 
-                    if file_back:
-                        image_back = Image.open(file_back).convert("RGBA")
-                    else:
-                        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-                        
-                    # 再生マークあったら開く
-                    if playmark_files:  
-                         playmark_image = Image.open(playmark_files[0]).convert("RGBA")  
-
-                    # 960×640
-                    # 顔輪郭マスクあったら image_centerを書き換え
-                    if mask_file:
-                        mask_image = Image.open(mask_file[0]).convert('L')
-                        image = np.array(image_center)
-                        mask = np.array(mask_image)
-                        # アンチエイリアス処理
-                        image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
-                        image_center = Image.fromarray(image)
-
-                    
-                    # 統合
-                    combined_center_back = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
-                    final_image = Image.alpha_composite(combined_center_back, image_front.convert("RGBA"))
-
-                    # ちょっと縮小する　AI生成
-                    scale = 0.96
-                    width, height = final_image.size
-                    new_width, new_height = int(width * scale), int(height * scale)
-                    x1, y1 = width // 2, height // 2
-                    x2, y2 = int(x1 * scale), int(y1 * scale)
-                    size_after = (int(width * scale), int(height * scale))
-                    image_np = np.array(final_image)
-                    resized_img = cv2.resize(image_np, dsize=size_after)
-                    deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-                    deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-                    framey = int(height * scale * 2)
-                    framex = int(width * scale * 2)
-                    finalimg_np = np.zeros((framey, framex, 4), np.uint8)
-                    finalimg_np[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                                int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-                    finalimg_np = finalimg_np[int(finalimg_np.shape[0] / 2 - height / 2):int(finalimg_np.shape[0] / 2 + height / 2),
-                                            int(finalimg_np.shape[1] / 2 - width / 2):int(finalimg_np.shape[1] / 2 + width / 2)]
-                    final_image = Image.fromarray(finalimg_np)
-
-                     # リサイズする 両端切る
-                    final_image = final_image.crop((335 - horizontal_shift, 0 + vertical_shift, 625 - horizontal_shift, 640+ vertical_shift))
-                    final_image = final_image.resize((290, 640), Image.LANCZOS)
-
-                    # 正方形にする　350px分消し去りたい　
-                    start_y = 640 - 290 - 75 
-                    end_y = start_y + 290
-                    b_image = final_image.crop((0, start_y, 290, end_y))
-
-                    # 縮小する
-                    b_image.thumbnail((100,100), Image.LANCZOS)
-
-                    # 再生マークあったら統合する
-                    if playmark_files:
-                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))  
-                    
-                    # ファイル名を設定する
-                    if file_front:
-                        file_name = file_front.name
-                    elif file_center:
-                        file_name = file_center.name
-                    elif file_back:
-                        file_name = file_back.name
-                    
-                    # 100 × 100保存
-                    binary_dict["/100x100/" + file_name] = b_image
-
-                    # 50 × 50保存
-                    b_image = b_image.resize((50, 50))
-                    binary_dict["/50x50/" + file_name] = b_image
+                # 50 x 50
+                b_image_50 = b_image.resize((50, 50))
+                binary_dict["/50x50/" + file_name] = b_image_50
 
 
-                    ####################################
+                ####################################
 
-                    #　640 × 640、320 ×　320　のリサイズ
+                #　640 × 640、320 ×　320　のリサイズ
 
-                    ####################################
-                    # 画像を読み込む
-                    if file_front:
-                        image_front = Image.open(file_front).convert("RGBA")
-                    else:
-                        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                ####################################
+                d_image, file_name = generate_large_images(file_front, file_center, file_back, mask_file,  binary_dict)
 
-                    if file_center:
-                        image_center = Image.open(file_center).convert("RGBA")
-                    else:
-                        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                # 640 x 640
+                binary_dict["/640x640/" + file_name] = d_image
 
-                    if file_back:
-                        image_back = Image.open(file_back).convert("RGBA")
-                    else:
-                        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-                        
-                    # 960×640
-                    # 顔輪郭マスクあったら image_centerを書き換え
-                    if mask_file:
-                        mask_image = Image.open(mask_file[0]).convert('L')
-                        image = np.array(image_center)
-                        mask = np.array(mask_image)
-                        # アンチエイリアス処理
-                        image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
-                        image_center = Image.fromarray(image)
+                # 320 x 320
+                c_image = d_image.resize((320, 320))
+                binary_dict["/320x320/" + file_name] = c_image
+                
+                ####################################
+                
+                #　960 × 640のリサイズ
 
-                    if file_front:
-                        image_front = image_front.resize((960, 640))
-                        binary_dict["/960x640/" + file_front.name] = image_front
-                    if file_center:
-                        image_center = image_center.resize((960, 640))
-                        if file_center:
-                            binary_dict["/960x640/" + file_center.name] = image_center
-                    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
-                        image_back = image_back.resize((960, 640))
-                        binary_dict["/960x640/" + file_back.name] = image_back
+                ###################################
 
-                    
+                if file_front:
+                    image_front = Image.open(file_front).convert("RGBA")
+                else:
+                    image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
-                    # 統合する
-                    image = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
-                    image = Image.alpha_composite(image.convert("RGBA"), image_front.convert("RGBA"))
+                if file_center:
+                    image_center = Image.open(file_center).convert("RGBA")
+                else:
+                    image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
+                if file_back:
+                    image_back = Image.open(file_back).convert("RGBA")
+                else:
+                    image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
-                    width, height = image.size
-                    if width < height:
-                        if width > 640:
-                            image = image.resize((448, int(height * 448 / width)))
-                        else:
-                            image = image.resize((int(width * 640 / height), 640))
-                    else:
-                        if height > 640:
-                            image = image.resize((int(width * 448 / height), 448))
-                        else:
-                            image = image.resize((640, int(height * 640 / width)))
+                # 顔輪郭マスクがあったら image_centerを書き換える
+                if mask_file:
+                    mask_image = Image.open(mask_file[0]).convert('L')
+                    image = np.array(image_center)
+                    mask = np.array(mask_image)
+                    image[:, :, 3] = (1.0 - mask / 255.0) * image[:, :, 3]
+                    image_center = Image.fromarray(image)
 
-                    # スケール変更 のこしとく
-                    scale = 1
-                    image = image.resize((int(image.width * scale), int(image.height * scale)))
-
-                    # 画像のサイズを取得
-                    width, height = image.size
-
-                    # 高さが足りない場合、足りない分を上に足す
-                    if height < 640:
-                        new_image = Image.new('RGBA', (width, 640), (0, 0, 0, 0))
-                        new_image.paste(image, (0, 640 - height))
-                        d_image = new_image
-
-                    # 幅が足りない場合、足りない分を両方に足す
-                    if width < 640:
-                        new_image = Image.new('RGBA', (640, 640), (0, 0, 0, 0))
-                        new_image.paste(image, ((640 - width) // 2, 0))
-                        d_image = new_image
-                                
-                    # 320×320を生成
-                    c_image = d_image.resize((320, 320))
-                    
-                    # ファイル名を設定する
-                    if file_front:
-                        file_name = file_front.name
-                    elif file_center:
-                        file_name = file_center.name
-                    elif file_back:
-                        file_name = file_back.name
-
-                    # 統合した画像の保存（
-                    binary_dict["/640x640/" + file_name] = d_image
-                    binary_dict["/320x320/" + file_name] = c_image
+                if file_front:
+                    image_front = image_front.resize((960, 640))
+                    binary_dict["/960x640/" + file_front.name] = image_front
+                if file_center:
+                    image_center = image_center.resize((960, 640))
+                    binary_dict["/960x640/" + file_center.name] = image_center
+                if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
+                    image_back = image_back.resize((960, 640))
+                    binary_dict["/960x640/" + file_back.name] = image_back
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
         show_zip_download("mm_body2.zip", binary_dict)
