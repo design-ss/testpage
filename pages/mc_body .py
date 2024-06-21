@@ -6,6 +6,9 @@ import io
 from PIL import Image, ImageOps, ImageDraw
 import time
 import base64
+import cv2
+from scipy import ndimage
+
 
 binary_dict = dict()
 
@@ -31,138 +34,207 @@ def getPreviewImage(image, border_size = 1, border_color='red'):
     return img_with_border
 
 #　100 × 100、50 ×　50　のリサイズ関数
-def generate_small_images(export_file_front, export_file_back, attribution_file):
-    
+def generate_small_images(file_front, file_center, file_back, head_file, attribution_file, horizontal_shift, vertical_shift, scale_100):
     # 画像を読み込む
-    if export_file_front:
-        image_front = Image.open(export_file_front)
+    if file_front:
+        image_front = Image.open(file_front).convert("RGBA")
         image_front = image_front.resize((960, 640))
     else:
         image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
-    if export_file_back:
-        image_back = Image.open(export_file_back)
+    if file_center:
+        image_center = Image.open(file_center).convert("RGBA")
+        image_center = image_center.resize((960, 640))
+    else:
+        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if file_back:
+        image_back = Image.open(file_back).convert("RGBA")
         image_back = image_back.resize((960, 640))
     else:
         image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
     attribution = Image.open(attribution_file)
 
-    # 統合する
-    image = Image.alpha_composite(image_back, image_front)
+    # 頭素体あったら開く
+    if head_file:  
+        image_head = Image.open(head_file[0]).convert("RGBA") 
+        image_center = Image.alpha_composite(image_center.convert("RGBA"), image_head.convert("RGBA"))
 
-    # 不要な透明画素を除去
-    image = image.crop(image.getbbox())
+    # 統合
+    combined_center_back = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
+    final_image = Image.alpha_composite(combined_center_back, image_front.convert("RGBA"))
 
-    # 画像の幅と高さを取得
-    width, height = image.size
+    # ちょっと縮小する　AI生成
+    scale = scale_100 
+    width, height = final_image.size
+    new_width, new_height = int(width * scale), int(height * scale)
+    x1, y1 = width // 2, height // 2
+    x2, y2 = int(x1 * scale), int(y1 * scale)
+    size_after = (int(width * scale), int(height * scale))
+    image_np = np.array(final_image)
+    resized_img = cv2.resize(image_np, dsize=size_after)
+    deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
+    deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
+    framey = int(height * scale * 2)
+    framex = int(width * scale * 2)
+    finalimg_np = np.zeros((framey, framex, 4), np.uint8)
+    finalimg_np[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
+                int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
+    finalimg_np = finalimg_np[int(finalimg_np.shape[0] / 2 - height / 2):int(finalimg_np.shape[0] / 2 + height / 2),
+                                int(finalimg_np.shape[1] / 2 - width / 2):int(finalimg_np.shape[1] / 2 + width / 2)]
+    final_image = Image.fromarray(finalimg_np)
 
-    # 短い辺を100に合わせるようにリサイズ
-    if width < height:
-        resized_image = image.resize((int(width * 100 / height), 100))
-    else:
-        resized_image = image.resize((100, int(height * 100 / width)))
+    # リサイズする 両端切る
+    final_image = final_image.crop((350 - horizontal_shift, 0 + vertical_shift, 640 - horizontal_shift, 640+ vertical_shift))
 
-    # 画像をちょっと縮小
-    resized_image = resized_image.resize((int(resized_image.width * 1), int(resized_image.height * 1)))
+    # 正方形にする　350px分消し去りたい　
+    start_y = 640 - 290 - 250 
+    end_y = start_y + 290
+    b_image = final_image.crop((0, start_y, 290, end_y))
 
-    # 画像を中央に合わせて切り抜く
-    left = (resized_image.width - 100) // 2
-    front = (resized_image.height - 100) // 2
-    right = left + 100
-    back = front + 100
-    b_image = resized_image.crop((left, front, right, back))
+    # 縮小する
+    b_image.thumbnail((100,100), Image.LANCZOS)
 
-    # 統合する
-    b_image = Image.alpha_composite(b_image, attribution)
-
+    # 属性を統合する 
+    b_image.paste(attribution, (0, 0), attribution) 
+    
     # ファイル名を設定する
-    if export_file_front:
-        file_name = export_file_front.name
-    else:
-        file_name = export_file_back.name
+    if file_front:
+        file_name = file_front.name
+    elif file_center:
+        file_name = file_center.name
+    elif file_back:
+        file_name = file_back.name  
 
     return b_image, file_name
 
 #　640 × 640、320 ×　320　のリサイズ関数
-def generate_large_images(export_file_front, export_file_back):
+def generate_large_images(file_front, file_center, file_back, head_file):
     # 画像を読み込む
-    if export_file_front:
-        image_front = Image.open(export_file_front)
+    if file_front:
+        image_front = Image.open(file_front).convert("RGBA")
         image_front = image_front.resize((960, 640))
     else:
         image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
-    if export_file_back:
-        image_back = Image.open(export_file_back)
+    if file_center:
+        image_center = Image.open(file_center).convert("RGBA")
+        image_center = image_center.resize((960, 640))
+    else:
+        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if file_back:
+        image_back = Image.open(file_back).convert("RGBA")
         image_back = image_back.resize((960, 640))
     else:
         image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                        
+    # 頭素体あったら開く
+    if head_file:  
+        image_head = Image.open(head_file[0]).convert("RGBA") 
+        image_center = Image.alpha_composite(image_center.convert("RGBA"), image_head.convert("RGBA"))
+
+    if file_front:
+        image_front = image_front.resize((960, 640))
+    if file_center:
+        image_center = image_center.resize((960, 640))
+    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
+        image_back = image_back.resize((960, 640))
 
     # 統合する
-    image = Image.alpha_composite(image_back, image_front)
+    image = Image.alpha_composite(image_back.convert("RGBA"), image_center.convert("RGBA"))
+    image = Image.alpha_composite(image.convert("RGBA"), image_front.convert("RGBA"))
 
-    # 不要な透明画素を除去
-    image = image.crop(image.getbbox())
+    # 左右の不透明部分の座標を取得　アルファ定義忘れずに！
+    alpha = np.array(image)[:,:,3]
+    left = np.min(np.nonzero(alpha)[1])
+    right = np.max(np.nonzero(alpha)[1])
 
-    # 画像の幅と高さを取得
-    width, height = image.size
+    if  left < 180 or right > 820 :
+        # 不要な透明部分を削除
+        crop_image = image.crop(image.getbbox())
+        # 画像の幅と高さを取得
+        width, height = crop_image.size
+        # width, heightどちらか大きい方を640になるようにアス比を維持しつつ縮小
+        max_size = max(width, height)
+        new_width = int(width * (640 / max_size))
+        new_height = int(height * (640 / max_size))
+        image = crop_image.resize((new_width, new_height))
 
-    # 短い辺を640に合わせるようにリサイズ
-    if width < height:
-        resized_image = image.resize((int(width * 640 / height), 640))
+        # 小さい方を640-小さい変数//2 で足りないpixel分足す処理
+        if new_width < 640:
+            padding_left = (640 - new_width) // 2
+            padding_right = 640 - new_width - padding_left
+            d_image = ImageOps.expand(image, (padding_left, 0, padding_right, 0))
+        elif new_height < 640:
+            padding_top = (640 - new_height) // 2
+            padding_bottom = 640 - new_height - padding_top
+            d_image = ImageOps.expand(image, (0, padding_top, 0, padding_bottom))
     else:
-        resized_image = image.resize((640, int(height * 640 / width)))
-
-    # 画像をちょっと縮小
-    resized_image = resized_image.resize((int(resized_image.width * 1), int(resized_image.height * 1)))
-
-    # 画像を下に移動
-    left = (resized_image.width - 640) / 2
-    front = resized_image.height - 640 * 0.85
-    right = left + 640
-    back = front + 640
-    d_image = resized_image.crop((left, front, right, back))
-
+        d_image = image.crop((180, 0, 820, image.height))
+                                                    
     # ファイル名を設定する
-    if export_file_front:
-        file_name = export_file_front.name
-    else:
-        file_name = export_file_back.name
+    if file_front:
+        file_name = file_front.name
+    elif file_center:
+        file_name = file_center.name
+    elif file_back:
+        file_name = file_back.name
 
     return d_image, file_name
 
-st.set_page_config(page_title='mcオーラ書き出し')
-st.title('mcオーラ書き出し')
+st.set_page_config(page_title='mc体書き出し')
+
+st.title('mc見た目体書き出し')
+
+# st.write('**ID付与前に複数構造のものを書き出す場合はお気をつけください。** <p style="font-size: 80%;"></p>', unsafe_allow_html=True)
+st.write('**「前後ありオーラ」「前のみ」「後ろのみ」の3種類を一気に処理はできません。** <p style="font-size: 80%;">アプリをリロードしてそれぞれ書き出してください。<br><br><br></p>', unsafe_allow_html=True)
 st.write('<span style="color:red;">※未圧縮データを使ってください！</span>', unsafe_allow_html=True)
-# オーラ前ファイル指定
-export_files_front = st.file_uploader("**オーラ前**", type='png', accept_multiple_files=True, key="export_files_front")
+col1, col2 , col3 = st.columns(3)
 
-# オーラ後ろファイル指定
-export_files_back = st.file_uploader("**オーラ後ろ**", type='png', accept_multiple_files=True, key="export_files_back")
+# 前ファイル指定
+with col1:
+    export_files_front = st.file_uploader("**体_前ファイル**", type='png', accept_multiple_files=True, key="export_files_front")
 
-# 属性ファイル　
-st.write('**属性**<span style="color:red; font-size: 80%;">　※必須</span>', unsafe_allow_html=True)
-st.write('<span style="font-size: 80%;">属性画像はローカルからアップロードお願いします。トレロに全属性画像のフォルダを記載してます。</span>', unsafe_allow_html=True)
+# 中ファイル指定
+with col2:
+    export_files_center = st.file_uploader("**体_中ファイル**", type='png', accept_multiple_files=True, key="export_files_center")
 
-attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
-# ファイルが選択されていない場合はメッセージを表示する
-if not attribution_file:
-    st.write('<span style="color:red;">未選択です。属性画像をアップロードしてください。</span>', unsafe_allow_html=True)
-
-
+# 後ろファイル指定
+with col3:
+    export_files_back = st.file_uploader("**体_後ろファイル**", type='png', accept_multiple_files=True, key="export_files_back")
+    
 # ファイル名を昇順に並び替える　ローカルでは選択順にアップされるが、クラウド上ではなぜかバラバラになるので制御するために昇順に
 export_files_front = sorted(export_files_front, key=lambda x: x.name)
+export_files_center = sorted(export_files_center, key=lambda x: x.name)
 export_files_back = sorted(export_files_back, key=lambda x: x.name)
 
-# パターン1説明
-st.write('100/50の見た目の中心を取って配置します。')
+col4 , col5 = st.columns(2)
+
+with col4:
+    # 属性ファイル
+    st.write('**属性**<span style="color:red; font-size: 80%;">　※必須</span>', unsafe_allow_html=True)
+    st.write('<span style="font-size: 80%;">属性画像はローカルからアップロードお願いします。トレロに全属性画像のフォルダを記載してます。</span>', unsafe_allow_html=True)
+    attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
+    # ファイルが選択されていない場合はメッセージを表示する
+    if not attribution_file:
+        st.write('<span style="color:red;">未選択です。属性画像をアップロードしてください。</span>', unsafe_allow_html=True)
+
+with col5:
+    st.write('**オマケ：頭（なくても書き出しできます）**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「mc_頭素体.png」をアップロードしてください。<br></p>', unsafe_allow_html=True)
+    # 頭素体
+    head_file= st.file_uploader("選択", type='png', accept_multiple_files=True, key="head_file")
 
 
-# # パラメータ調整スライダー オーラ調整しなくてもいけそうなので不要？
-# vertical_shift = st.slider('下移動⇔上移動', min_value=-30, max_value=30, value=0)
-# horizontal_shift = st.slider('左移動⇔右移動', min_value=-30, max_value=30, value=0)
-# scale = st.slider('縮小⇔拡大', min_value=0.0, max_value=2.0, value=0.7)
+    
+st.markdown('---')
+# パラメータ調整スライダー 
+st.write('**50/100調整用** 　　320/640で調整が必要な場合はpsdでの書き出しで対応してください。', unsafe_allow_html=True)
+vertical_shift = st.slider('下移動⇔上移動', min_value=-150, max_value=150, value=0)
+horizontal_shift = st.slider('左移動⇔右移動', min_value=-150, max_value=150, value=0)
+scale_100 = st.slider('縮小⇔拡大　デフォルトは0.75', min_value=0.5, max_value=1.5, value=0.75)
+
 
 # 一括書き出しと個別書き出し
 export_button1, export_selected_button1 = st.columns(2)
@@ -172,130 +244,210 @@ with export_button1:
     if st.button('一括書き出し'):
         with st.spinner("画像生成中です..."):
             binary_dict.clear() # 初期化
-             # 前ファイルと後ろファイル　
-            if not export_files_front:
-                export_files_front = [None] * len(export_files_back)
-            if not export_files_back:
-                export_files_back = [None] * len(export_files_front)
-            export_files = list(zip(export_files_front, export_files_back))
             
-            for export_file_front, export_file_back in export_files:
-                ####################################
-                #　100 × 100、50 ×　50　のリサイズ
-                ####################################
-                b_image, file_name = generate_small_images(export_file_front, export_file_back, attribution_file)
+            # リスト数調整
+            max_length = max(len(export_files_front), len(export_files_center), len(export_files_back))
+            export_files_front += [None] * (max_length - len(export_files_front))
+            export_files_center += [None] * (max_length - len(export_files_center))
+            export_files_back += [None] * (max_length - len(export_files_back))
 
-                # 100 × 100保存
-                binary_dict["/100x100/" + file_name] = b_image
+            for file_front, file_center, file_back in zip(export_files_front, export_files_center, export_files_back):
+                    # ####################################
 
-                # 50 × 50保存
-                a_image = b_image.resize((50, 50))
-                binary_dict["/50x50/" + file_name] = a_image
+                    #　50 × 50、100 × 100　のリサイズ
+
+                    # ####################################
+                    b_image, file_name = generate_small_images(file_front, file_center, file_back, head_file, attribution_file, horizontal_shift, vertical_shift, scale_100)
+                    
+                    # 100 × 100保存
+                    binary_dict["/100x100/" + file_name] = b_image
+
+                    # 50 × 50保存
+                    a_image = b_image.resize((50, 50))
+                    binary_dict["/50x50/" + file_name] = a_image
 
 
-                ####################################
-                #　640 × 640、320 ×　320　のリサイズ
-                ####################################
-                d_image, file_name = generate_large_images(export_file_front, export_file_back)
+                    ####################################
 
-                # 640 × 640保存
-                binary_dict["/640x640/" + file_name] = d_image
+                    #　640 × 640、320 ×　320　のリサイズ
 
-                # 320 × 320保存
-                c_image = d_image.resize((320, 320))
-                binary_dict["/320x320/" + file_name] = c_image
+                    ####################################
+                    d_image, file_name = generate_large_images(file_front, file_center, file_back, head_file)
 
-                ####################################
-                #　960 × 640　の保存
-                ####################################
-                # 画像を読み込む
-                if export_file_front:
-                    image_front = Image.open(export_file_front)
-                    image_front = image_front.resize((960, 640))
-                    binary_dict["/960x640/" + export_file_front.name] = image_front
-                if export_file_back:
-                    image_back = Image.open(export_file_back)
-                    image_back = image_back.resize((960, 640))
-                    binary_dict["/960x640/" + export_file_back.name] = image_back
+                    # 640 × 640保存
+                    binary_dict["/640x640/" + file_name] = d_image
+                    
+                    # 320 × 320保存
+                    c_image = d_image.resize((320, 320))
+                    binary_dict["/320x320/" + file_name] = c_image
+                    
+                    ####################################
+                    
+                    #　960 × 640　の保存
+                    
+                    ####################################
+                    # 画像を読み込む
+                    if file_front:
+                        image_front = Image.open(file_front).convert("RGBA")
+                        image_front = image_front.resize((960, 640))
+                    else:
+                        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
+                    if file_center:
+                        image_center = Image.open(file_center).convert("RGBA")
+                        image_center = image_center.resize((960, 640))
+                    else:
+                        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+                    if file_back:
+                        image_back = Image.open(file_back).convert("RGBA")
+                        image_back = image_back.resize((960, 640))
+                    else:
+                        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                                        
+                    # 頭素体あったら開く
+                    if head_file:  
+                        image_head = Image.open(head_file[0]).convert("RGBA") 
+                        image_center = Image.alpha_composite(image_center.convert("RGBA"), image_head.convert("RGBA"))
+
+                    if file_front:
+                        image_front = image_front.resize((960, 640))
+                        binary_dict["/960x640/" + file_front.name] = image_front
+                    if file_center:
+                        image_center = image_center.resize((960, 640))
+                        if file_center:
+                            binary_dict["/960x640/" + file_center.name] = image_center
+                    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
+                        image_back = image_back.resize((960, 640))
+                        binary_dict["/960x640/" + file_back.name] = image_back
+                  
+                    
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
-        show_zip_download("mc_aura.zip", binary_dict)
+        show_zip_download("mc_body.zip", binary_dict)
     st.write('全てのファイルを書き出します。')
 st.markdown('---')
 
-
-# パターン1のプレビュー処理
-with st.spinner("プレビュー画像生成中です..."):
-    binary_dict.clear()  # 初期化
-    if not export_files_front:
-        export_files_front = [None] * len(export_files_back)
-    if not export_files_back:
-        export_files_back = [None] * len(export_files_front)
-    export_files = list(zip(export_files_front, export_files_back))
-
-    # プレビュー画像にチェックボックスを付ける　個別書き出し用の空のリスト作る
+# 100プレビュー処理
+# if vertical_shift or horizontal_shift or scale  or preview_button1:
+with st.spinner("画像生成中です..."):
+    binary_dict.clear() # 初期化
+    # 個別書き出し用空のファイルリスト
     selected_files = []
     cols = st.columns(4)
-    for i, (export_file_front, export_file_back) in enumerate(export_files):
-        preview_image, file_name = generate_small_images(export_file_front, export_file_back, attribution_file)
+    i = 0
+    # リスト数調整
+    max_length = max(len(export_files_front), len(export_files_center), len(export_files_back))
+    export_files_front += [None] * (max_length - len(export_files_front))
+    export_files_center += [None] * (max_length - len(export_files_center))
+    export_files_back += [None] * (max_length - len(export_files_back))
 
-        # プレビュー画像を表示する
-        cols[i % 4].image(getPreviewImage(preview_image), use_column_width=False)
+    for file_front, file_center, file_back in zip(export_files_front, export_files_center, export_files_back):
+        ####################################
+
+        #　50 × 50、100 × 100　のリサイズ
+
+        ####################################
+        preview_image, file_name = generate_small_images(file_front, file_center, file_back, head_file, attribution_file, horizontal_shift, vertical_shift, scale_100)
+
+        # 中心線を描画する
+        draw = ImageDraw.Draw(preview_image)
+        draw.line((50, 0, 50, 100), fill="red", width=1)
+        draw.line((0, 50, 100, 50), fill="red", width=1)
+
+        # プレビュー画像を表示する preview_imageに変換し忘れてたわ
+        preview_image = getPreviewImage(preview_image)
+        cols[i % 4].image(preview_image, use_column_width=False)
+
+        # チェックボックス
+        if cols[i % 4].checkbox("選択", key=f"select_{file_name}"):
+            selected_files.append((file_front, file_center, file_back))
         
-        if cols[i % 4].checkbox(file_name, key=f"select_{file_name}"):
-            selected_files.append((export_file_front, export_file_back))
+        i += 1
 
 # 個別書き出し 空のファイルリストはプレビューの中に
 with export_selected_button1:
     if st.button('個別書き出し'):
         with st.spinner("画像生成中です..."):
             binary_dict.clear() # 初期化
-             # 前ファイルと後ろファイルを結合
-            if not export_files_front:
-                export_files_front = [None] * len(export_files_back)
-            if not export_files_back:
-                export_files_back = [None] * len(export_files_front)
-            export_files = list(zip(export_files_front, export_files_back))
+             # リスト数調整
+            max_length = max(len(export_files_front), len(export_files_center), len(export_files_back))
+            export_files_front += [None] * (max_length - len(export_files_front))
+            export_files_center += [None] * (max_length - len(export_files_center))
+            export_files_back += [None] * (max_length - len(export_files_back))
 
-            for export_file_front, export_file_back in selected_files:
-                
-                ####################################
-                #　100 × 100、50 ×　50　のリサイズ
-                ####################################
-                b_image, file_name = generate_small_images(export_file_front, export_file_back, attribution_file)
-                # 100 × 100保存
-                binary_dict["/100x100/" + file_name] = b_image
+            for file_front, file_center, file_back in selected_files:
+                    # ####################################
 
-                # 50 × 50保存
-                b_image = b_image.resize((50, 50))
-                binary_dict["/50x50/" + file_name] = b_image
+                    #　50 × 50、100 × 100　のリサイズ
 
-                ####################################
-                #　640 × 640、320 ×　320　のリサイズ
-                ####################################
-                d_image, file_name = generate_large_images(export_file_front, export_file_back)
+                    # ####################################
+                    b_image, file_name = generate_small_images(file_front, file_center, file_back, head_file, attribution_file, horizontal_shift, vertical_shift, scale_100)
+                    
+                    # 100 × 100保存
+                    binary_dict["/100x100/" + file_name] = b_image
 
-                # 統合した画像の保存（
-                binary_dict["/640x640/" + file_name] = d_image
-      
-                c_image = d_image.resize((320, 320))
-                binary_dict["/320x320/" + file_name] = c_image
+                    # 50 × 50保存
+                    a_image = b_image.resize((50, 50))
+                    binary_dict["/50x50/" + file_name] = a_image
 
-                ####################################
-                #　960 × 640　の保存
-                ####################################
-                # 画像を読み込む
-                if export_file_front:
-                    image_front = Image.open(export_file_front)
-                    image_front = image_front.resize((960, 640))
-                    binary_dict["/960x640/" + export_file_front.name] = image_front
-                if export_file_back:
-                    image_back = Image.open(export_file_back)
-                    image_back = image_back.resize((960, 640))
-                    binary_dict["/960x640/" + export_file_back.name] = image_back
 
+                    ####################################
+
+                    #　640 × 640、320 ×　320　のリサイズ
+
+                    ####################################
+                    d_image, file_name = generate_large_images(file_front, file_center, file_back, head_file)
+
+                    # 640 × 640保存
+                    binary_dict["/640x640/" + file_name] = d_image
+                    
+                    # 320 × 320保存
+                    c_image = d_image.resize((320, 320))
+                    binary_dict["/320x320/" + file_name] = c_image
+                    
+                      ####################################
+                    
+                    #　960 × 640　の保存
+                    
+                    ####################################
+                    # 画像を読み込む
+                    if file_front:
+                        image_front = Image.open(file_front).convert("RGBA")
+                        image_front = image_front.resize((960, 640))
+                    else:
+                        image_front = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+                    if file_center:
+                        image_center = Image.open(file_center).convert("RGBA")
+                        image_center = image_center.resize((960, 640))
+                    else:
+                        image_center = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+                    if file_back:
+                        image_back = Image.open(file_back).convert("RGBA")
+                        image_back = image_back.resize((960, 640))
+                    else:
+                        image_back = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                                        
+                    # 頭素体あったら開く
+                    if head_file:  
+                        image_head = Image.open(head_file[0]).convert("RGBA") 
+                        image_center = Image.alpha_composite(image_center.convert("RGBA"), image_head.convert("RGBA"))
+
+                    if file_front:
+                        image_front = image_front.resize((960, 640))
+                        binary_dict["/960x640/" + file_front.name] = image_front
+                    if file_center:
+                        image_center = image_center.resize((960, 640))
+                        if file_center:
+                            binary_dict["/960x640/" + file_center.name] = image_center
+                    if file_back and file_back.name not in ['素体_男.png', '素体_女.png']:
+                        image_back = image_back.resize((960, 640))
+                        binary_dict["/960x640/" + file_back.name] = image_back
+                    
+                    
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
-        show_zip_download("mc_aura2.zip", binary_dict)
+        show_zip_download("mc_body2.zip", binary_dict)
     st.write('チェックを入れたファイルを書き出します。')
