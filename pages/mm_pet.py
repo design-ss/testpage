@@ -31,10 +31,99 @@ def getPreviewImage(image, border_size = 1, border_color='red'):
     img_with_border = ImageOps.expand(image, border = border_size, fill=border_color)
     return img_with_border
 
+
+def generate_small_images(export_file, scale, vertical_shift, horizontal_shift):
+    # 画像を読み込む
+    image = Image.open(export_file).convert("RGBA")
+
+    # 不要な透明部分削除
+    image = image.crop(image.getbbox())
+
+    # メモ（のちほど）
+    width, height = image.size
+    if width < height:
+        if width > 100 and height / width > 1.7:
+            resized_image = image.resize((70, int(height * 70 / width)))
+        else:
+            resized_image = image.resize((int(width * 100 / height), 100))
+    else:
+        if height > 100 and width / height > 1.7:
+            resized_image = image.resize((int(width * 70 / height), 70))
+        else:
+            resized_image = image.resize((100, int(height * 100 / width)))
+
+    # スケール変更
+    resized_image = resized_image.resize((int(resized_image.width * scale), int(resized_image.height * scale)))
+
+    image_np = np.array(resized_image)
+    alpha = np.array(resized_image.convert('L'))
+    cy, cx = ndimage.center_of_mass(alpha)
+
+    # 中心座標
+    center_x = int(cx)
+    center_y = int(cy)
+
+    # 画像の不透明部分の最下部
+    image_y = np.max(np.nonzero(alpha)[0])
+
+    if not (width < height and width > 100 and height / width > 1.7) and not (height < width and height > 100 and width / height > 1.7):
+        center_y += vertical_shift
+        center_x += -horizontal_shift
+
+    # 100×100
+    b_image = resized_image.crop((center_x - 50, center_y - 50, center_x + 50, center_y + 50))
+    
+    # ファイル名を設定する
+    file_name = export_file.name
+    
+    return b_image, file_name
+
+def generate_large_images(export_file):
+    # 画像を読み込む
+    image = Image.open(export_file).convert("RGBA")
+
+    # # 960×640
+    # image_960x640 = image.resize((960, 640))
+    # binary_dict["/960x640/" + export_file.name] = image_960x640
+
+    # 不要な透明部分削除
+    image = image.crop(image.getbbox())
+
+    image_np = np.array(image)
+    alpha = np.array(image.convert('L'))
+    cy, cx = ndimage.center_of_mass(alpha)
+
+    center_x = int(cx)
+    center_y = int(cy)
+
+    # 下の座標を取得
+    bottom_coord = center_y + 320
+
+    # 画像の不透明部分の最下部の座標を測定
+    image_y = np.max(np.nonzero(alpha)[0])
+
+    # 座標の調整
+    if bottom_coord - image_y > 15:
+        center_y -= (bottom_coord - image_y) - 15
+    elif bottom_coord - image_y < 15:
+        center_y += 15 - (bottom_coord - image_y)
+
+    # 640×640
+    left = center_x - 640 // 2
+    top = center_y - 640 // 2
+    right = left + 640
+    bottom = top + 640
+    d_image = image.crop((left, top, right, bottom))
+
+    # ファイル名を設定する
+    file_name = export_file.name
+    
+    return d_image, file_name
+
 st.set_page_config(page_title='mmペット書き出し')
 
 st.title('mmペット書き出し')
-
+st.write('<span style="color:red;">※未圧縮データを使ってください！</span>', unsafe_allow_html=True)
 # ファイルアップローダー
 export_files = st.file_uploader("ファイルを選択", type='png', accept_multiple_files=True, key="export_files")
 
@@ -62,51 +151,12 @@ with export_button1:
                 #　50 × 50、100×100　のリサイズ
 
                 ####################################
-                image = Image.open(export_file)
+                b_image, file_name = generate_small_images(export_file, scale, vertical_shift, horizontal_shift)
 
-                # 不要な透明部分削除
-                image = image.crop(image.getbbox())
-
-                # メモ（のちほど）
-                width, height = image.size
-                if width < height:
-                    if width > 100 and height / width > 1.7:
-                        resized_image = image.resize((70, int(height * 70 / width)))
-                    else:
-                        resized_image = image.resize((int(width * 100 / height), 100))
-                else:
-                    if height > 100 and width / height > 1.7:
-                        resized_image = image.resize((int(width * 70 / height), 70))
-                    else:
-                        resized_image = image.resize((100, int(height * 100 / width)))
-
-                # スケール変更
-                resized_image = resized_image.resize((int(resized_image.width * scale), int(resized_image.height * scale)))
-
-                image_np = np.array(resized_image)
-                alpha = np.array(resized_image.convert('L'))
-                cy, cx = ndimage.center_of_mass(alpha)
-
-                # 中心座標
-                center_x = int(cx)
-                center_y = int(cy)
-
-                # 画像の不透明部分の最下部
-                image_y = np.max(np.nonzero(alpha)[0])
-
-                width, height = image.size
-                if not (width < height and width > 100 and height / width > 1.7) and not (height < width and height > 100 and width / height > 1.7):
-                    center_y += vertical_shift
-                    center_x += -horizontal_shift
-
-                # 100×100
-                b_image = resized_image.crop((center_x - 50, center_y - 50, center_x + 50, center_y + 50))
-
-
-                # 100 × 100保存
+                # 100 × 100
                 binary_dict["/100x100/" + export_file.name] = b_image
 
-                # 50 × 50保存
+                # 50 × 50
                 b_image = b_image.resize((50, 50))
                 binary_dict["/50x50/" + export_file.name] = b_image
 
@@ -116,53 +166,26 @@ with export_button1:
                 #　640 × 640、320 ×　320　のリサイズ
 
                 ####################################
-
-                # 画像を読み込む
-                image = Image.open(export_file)
-
-                # 960×640
-                image = image.resize((960, 640))
-                # image.save(os.path.join(OUTPUT_PATH,'e.png'))
-                binary_dict["/960x640/" + export_file.name] = image
-
-
-                # 不要な透明部分削除
-                image = image.crop(image.getbbox())
-
-                image_np = np.array(image)
-                # alpha = image_np[:, :, 3] # 圧縮 png は ndim(dimention)が２になるためエラーになる
-                alpha = np.array(image.convert('L')) # 2 dimention の grayscale イメージ化して取る。変数名は alpha のままだけで、値は alpha ではなく、grayscale の 2次元 numpy array
-                cy, cx = ndimage.center_of_mass(alpha)
-
-                center_x = int(cx)
-                center_y = int(cy)
-
-                # 下の座標を取得
-                bottom_coord = center_y + 320
-
-                # 画像の不透明部分の最下部の座標を測定（変数image_yとする）
-                image_y = np.max(np.nonzero(alpha)[0])
-
-                width, height = image.size
-
-            # （center_y - 50）-　image_yの値により移動
-                if bottom_coord - image_y > 15:
-                    center_y -= (bottom_coord - image_y) - 15
-                elif bottom_coord - image_y < 15:
-                    center_y += 15 - (bottom_coord - image_y)
+                d_image, file_name = generate_large_images(export_file)
 
                 # 640×640
-                left = center_x - 640 // 2
-                top = center_y - 640 // 2
-                right = left + 640
-                bottom = top + 640
-                d_image = image.crop((left, top, right, bottom))
-
+                binary_dict["/640x640/" + export_file.name] = d_image              
                 # 320×320
                 c_image = d_image.resize((320, 320))
-
                 binary_dict["/320x320/" + export_file.name] = c_image
-                binary_dict["/640x640/" + export_file.name] = d_image
+                
+                ####################################
+                
+                #　960 × 640のリサイズ
+
+                ###################################
+                image = Image.open(export_file).convert("RGBA")
+                
+                # 960×640
+                image = image.resize((960, 640))
+                binary_dict["/960x640/" + export_file.name] = image
+                            
+
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
         show_zip_download("mm_pet.zip", binary_dict)
@@ -186,46 +209,7 @@ with st.spinner("プレビュー画像生成中です..."):
         #　50 × 50、100×100　のリサイズ
 
         ####################################
-        image = Image.open(export_file)
-
-        # 不要な透明部分削除
-        image = image.crop(image.getbbox())
-
-        # メモ（のちほど）
-        width, height = image.size
-        if width < height:
-            if width > 100 and height / width > 1.7:
-                resized_image = image.resize((70, int(height * 70 / width)))
-            else:
-                resized_image = image.resize((int(width * 100 / height), 100))
-        else:
-            if height > 100 and width / height > 1.7:
-                resized_image = image.resize((int(width * 70 / height), 70))
-            else:
-                resized_image = image.resize((100, int(height * 100 / width)))
-
-        # スケール変更
-        resized_image = resized_image.resize((int(resized_image.width * scale), int(resized_image.height * scale)))
-
-        image_np = np.array(resized_image)
-        alpha = np.array(resized_image.convert('L'))
-        cy, cx = ndimage.center_of_mass(alpha)
-
-        # 中心座標
-        center_x = int(cx)
-        center_y = int(cy)
-
-        # 画像の不透明部分の最下部
-        image_y = np.max(np.nonzero(alpha)[0])
-        image_x = np.max(np.nonzero(alpha)[0])
-
-        width, height = image.size
-        if not (width < height and width > 100 and height / width > 1.7) and not (height < width and height > 100 and width / height > 1.7):
-            center_y += vertical_shift
-            center_x += -horizontal_shift
-
-        # 100×100
-        b_image = resized_image.crop((center_x - 50, center_y - 50, center_x + 50, center_y + 50))
+        b_image, file_name = generate_small_images(export_file, scale, vertical_shift, horizontal_shift)
 
         # 背景を読み込む
         flame_image = Image.open("./data/100_flame.png")
@@ -250,7 +234,6 @@ with st.spinner("プレビュー画像生成中です..."):
 
 
 
-
 # 個別書き出し 空のファイルリストはプレビューの中に
 with export_selected_button1:
     if st.button('個別書き出し'):
@@ -263,51 +246,12 @@ with export_selected_button1:
                 #　50 × 50、100×100　のリサイズ
 
                 ####################################
-                image = Image.open(export_file)
+                b_image, file_name = generate_small_images(export_file, scale, vertical_shift, horizontal_shift)
 
-                # 不要な透明部分削除
-                image = image.crop(image.getbbox())
-
-                # メモ（のちほど）
-                width, height = image.size
-                if width < height:
-                    if width > 100 and height / width > 1.7:
-                        resized_image = image.resize((70, int(height * 70 / width)))
-                    else:
-                        resized_image = image.resize((int(width * 100 / height), 100))
-                else:
-                    if height > 100 and width / height > 1.7:
-                        resized_image = image.resize((int(width * 70 / height), 70))
-                    else:
-                        resized_image = image.resize((100, int(height * 100 / width)))
-
-                # スケール変更
-                resized_image = resized_image.resize((int(resized_image.width * scale), int(resized_image.height * scale)))
-
-                image_np = np.array(resized_image)
-                alpha = np.array(resized_image.convert('L'))
-                cy, cx = ndimage.center_of_mass(alpha)
-
-                # 中心座標
-                center_x = int(cx)
-                center_y = int(cy)
-
-                # 画像の不透明部分の最下部
-                image_y = np.max(np.nonzero(alpha)[0])
-
-                width, height = image.size
-                if not (width < height and width > 100 and height / width > 1.7) and not (height < width and height > 100 and width / height > 1.7):
-                    center_y += vertical_shift
-                    center_x += -horizontal_shift
-
-                # 100×100
-                b_image = resized_image.crop((center_x - 50, center_y - 50, center_x + 50, center_y + 50))
-
-
-                # 100 × 100保存
+                # 100 × 100
                 binary_dict["/100x100/" + export_file.name] = b_image
 
-                # 50 × 50保存
+                # 50 × 50
                 b_image = b_image.resize((50, 50))
                 binary_dict["/50x50/" + export_file.name] = b_image
 
@@ -317,53 +261,26 @@ with export_selected_button1:
                 #　640 × 640、320 ×　320　のリサイズ
 
                 ####################################
-
-                # 画像を読み込む
-                image = Image.open(export_file)
-
-                # 960×640
-                image = image.resize((960, 640))
-                # image.save(os.path.join(OUTPUT_PATH,'e.png'))
-                binary_dict["/960x640/" + export_file.name] = image
-
-
-                # 不要な透明部分削除
-                image = image.crop(image.getbbox())
-
-                image_np = np.array(image)
-                # alpha = image_np[:, :, 3] # 圧縮 png は ndim(dimention)が２になるためエラーになる
-                alpha = np.array(image.convert('L')) # 2 dimention の grayscale イメージ化して取る。変数名は alpha のままだけで、値は alpha ではなく、grayscale の 2次元 numpy array
-                cy, cx = ndimage.center_of_mass(alpha)
-
-                center_x = int(cx)
-                center_y = int(cy)
-
-                # 下の座標を取得
-                bottom_coord = center_y + 320
-
-                # 画像の不透明部分の最下部の座標を測定（変数image_yとする）
-                image_y = np.max(np.nonzero(alpha)[0])
-
-                width, height = image.size
-
-            # （center_y - 50）-　image_yの値により移動
-                if bottom_coord - image_y > 15:
-                    center_y -= (bottom_coord - image_y) - 15
-                elif bottom_coord - image_y < 15:
-                    center_y += 15 - (bottom_coord - image_y)
+                d_image, file_name = generate_large_images(export_file)
 
                 # 640×640
-                left = center_x - 640 // 2
-                top = center_y - 640 // 2
-                right = left + 640
-                bottom = top + 640
-                d_image = image.crop((left, top, right, bottom))
-
+                binary_dict["/640x640/" + export_file.name] = d_image              
                 # 320×320
                 c_image = d_image.resize((320, 320))
-
                 binary_dict["/320x320/" + export_file.name] = c_image
-                binary_dict["/640x640/" + export_file.name] = d_image
+                
+                 
+                ####################################
+                
+                #　960 × 640のリサイズ
+
+                ###################################
+                image = Image.open(export_file).convert("RGBA")
+                
+                # 960×640
+                image = image.resize((960, 640))
+                binary_dict["/960x640/" + export_file.name] = image
+                
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
         show_zip_download("mm_pet2.zip", binary_dict)
