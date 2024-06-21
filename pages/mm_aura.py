@@ -32,6 +32,145 @@ def getPreviewImage(image, border_size = 1, border_color='red'):
     img_with_border = ImageOps.expand(image, border = border_size, fill=border_color)
     return img_with_border
 
+#　100 × 100、50 ×　50　のリサイズ関数
+def generate_small_images(export_file_top, export_file_bottom, export_files_top_male, export_files_bottom_male, silhouette_dict, playmark_files):
+    # 画像を読み込む
+    if export_file_top:
+        image_top = Image.open(export_file_top).convert("RGBA")
+    else:
+        image_top = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if export_file_bottom:
+        image_bottom = Image.open(export_file_bottom).convert("RGBA")
+    else:
+        image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    # 男女画像
+    if export_file_top in export_files_top_male or export_file_bottom in export_files_bottom_male:
+        silhouette_image = Image.open(silhouette_dict["シルエット_男性.png"])
+    else:
+        silhouette_image = Image.open(silhouette_dict["シルエット_女性.png"])
+
+    # 再生マーク
+    playmark_image = None
+    if playmark_files:  
+        playmark_image = Image.open(playmark_files[0]).convert("RGBA")
+
+    # ちょっと縮小する AI生成
+    scale = 0.93
+    for image in [image_top, image_bottom]:
+        width, height = image.size
+        new_width, new_height = int(width * scale), int(height * scale)
+        x1, y1 = width // 2, height // 2
+        x2, y2 = int(x1 * scale), int(y1 * scale)
+        size_after = (int(width * scale), int(height * scale))
+        image_np = np.array(image)
+        resized_img = cv2.resize(image_np, dsize=size_after)
+        deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
+        deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
+        framey = int(height * scale * 2)
+        framex = int(width * scale * 2)
+        finalimg = np.zeros((framey, framex, 4), np.uint8)
+        finalimg[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
+                int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
+        finalimg = finalimg[int(finalimg.shape[0] / 2 - height / 2):int(finalimg.shape[0] / 2 + height / 2),
+                            int(finalimg.shape[1] / 2 - width / 2):int(finalimg.shape[1] / 2 + width / 2)]
+        image.paste(Image.fromarray(finalimg), (0,0))
+
+    # リサイズする 両端切る
+    image_top = image_top.crop((132, 0, 828, 640))
+    image_bottom = image_bottom.crop((132, 0, 828, 640))
+    image_top = image_top.resize((696, 640), Image.LANCZOS)
+    image_bottom = image_bottom.resize((696, 640), Image.LANCZOS)
+
+    # 正方形にする 上下整える
+    image_top = image_top.crop((28, 0, 668, 640))  # (696-640)/2 = 28
+    image_bottom = image_bottom.crop((28, 0, 668, 640))
+    image_top = image_top.resize((640, 640), Image.LANCZOS)
+    image_bottom = image_bottom.resize((640, 640), Image.LANCZOS)
+
+    # 縮小する
+    image_top.thumbnail((100,100), Image.LANCZOS)
+    image_bottom.thumbnail((100,100), Image.LANCZOS)
+    silhouette_image.thumbnail((100,100), Image.LANCZOS)
+
+    # 統合する
+    final_image = Image.alpha_composite(image_bottom.convert("RGBA"), silhouette_image.convert("RGBA"))
+    b_image = Image.alpha_composite(final_image.convert("RGBA"), image_top.convert("RGBA"))
+
+    if playmark_image:
+        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))
+
+    # ファイル名を設定する
+    if export_file_top:
+        file_name = export_file_top.name
+    else:
+        file_name = export_file_bottom.name
+
+    return b_image, file_name
+
+#　640 × 640、320 ×　320　のリサイズ関数
+def generate_large_images(export_file_top, export_file_bottom, scale_640, horizontal_shift, vertical_shift):
+    # 画像を読み込む
+    if export_file_top:
+        image_top = Image.open(export_file_top).convert("RGBA")
+    else:
+        image_top = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    if export_file_bottom:
+        image_bottom = Image.open(export_file_bottom).convert("RGBA")
+    else:
+        image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+
+    # 統合する
+    image = Image.alpha_composite(image_bottom.convert("RGBA"), image_top.convert("RGBA"))
+
+    # ちょっと縮小する　AI生成
+    scale = scale_640
+    width, height = image.size
+    new_width, new_height = int(width * scale), int(height * scale)
+    x1, y1 = width // 2, height // 2
+    x2, y2 = int(x1 * scale), int(y1 * scale)
+    size_after = (int(width * scale), int(height * scale))
+    image_np = np.array(image)
+    resized_img = cv2.resize(image_np, dsize=size_after)
+    deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
+    deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
+    framey = int(height * scale * 2)
+    framex = int(width * scale * 2)
+    finalimg = np.zeros((framey, framex, 4), np.uint8)
+    finalimg[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
+            int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
+    finalimg = finalimg[int(finalimg.shape[0] / 2 - height / 2):int(finalimg.shape[0] / 2 + height / 2),
+                        int(finalimg.shape[1] / 2 - width / 2):int(finalimg.shape[1] / 2 + width / 2)]
+    image.paste(Image.fromarray(finalimg), (0,0))
+
+    # 不要な透明画素を除去
+    image = image.crop(image.getbbox())
+
+    # 画像の幅と高さを取得
+    width, height = image.size
+
+    # 幅で足りない分は左右に足す
+    pad_width_left = (640 - width) // 2 + horizontal_shift
+    pad_width_right = (640 - width) // 2 - horizontal_shift
+
+    # 高さで足りない分は足す 下部微調整
+    up = vertical_shift + 15
+    pad_height = 640 - height - up
+    padding = (pad_width_left, pad_height, pad_width_right, up)
+    d_image = ImageOps.expand(image, padding)
+    d_image = d_image.resize((640, 640))
+
+    # ファイル名を設定する
+    if export_file_top:
+        file_name = export_file_top.name
+    else:
+        file_name = export_file_bottom.name
+
+    return d_image, file_name
+
+
 st.set_page_config(page_title='mmオーラ書き出し')
 
 st.title('mmオーラ書き出し')
@@ -39,8 +178,6 @@ st.title('mmオーラ書き出し')
 st.write('**「前後ありオーラ」「前のみ」「後ろのみ」の3種類を一気に処理はできません。** <p style="font-size: 80%;">アプリをリロードしてそれぞれ書き出してください。</p>', unsafe_allow_html=True)
 
 st.write('**ID付与前に「前後オーラ」を「複数枚同時に」書き出す場合はお気をつけください。** <p style="font-size: 80%;">ファイルは選択順に関係なく「昇順」でアップされます。<br> そのため、適切に前後パーツを組み合わせるために、ファイル名の先頭に3桁の数字を付けるなどで順番を制御してください。<br>（例）<br>前オーラ：「001.前_目玉A」「002.前_目玉B」「003.前_目玉C」<br>後ろオーラ：「004.後ろ_目玉A」「005.後ろ_目玉B」「006.後ろ_目玉C」<br> とABCそれぞれの順番が正しくなるように数字を付けてください。</p>', unsafe_allow_html=True)
-
-
 
 
 col1, col2 = st.columns(2)
@@ -127,82 +264,8 @@ with export_button1:
                     #　50 × 50、100 × 100　のリサイズ
 
                     # ####################################
-                    # 画像を読み込む
-                    if export_file_top:
-                        image_top = Image.open(export_file_top).convert("RGBA")
-                    else:
-                        image_top = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
+                    b_image, file_name = generate_small_images(export_file_top, export_file_bottom, export_files_top_male, export_files_bottom_male, silhouette_dict, playmark_files)
 
-                    if export_file_bottom:
-                        image_bottom = Image.open(export_file_bottom).convert("RGBA")
-                    else:
-                        image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-                                        
-                    # 男女画像 
-                    if export_file_top in export_files_top_male or export_file_bottom in export_files_bottom_male:
-                        silhouette_image = Image.open(silhouette_dict["シルエット_男性.png"])
-                    else:
-                        silhouette_image = Image.open(silhouette_dict["シルエット_女性.png"])
-                    
-                    # 再生マーク
-                    if playmark_files:  
-                         playmark_image = Image.open(playmark_files[0]).convert("RGBA")  
-
-                    
-                    # ちょっと縮小する　AI生成
-                    scale = 0.93
-                    for image in [image_top, image_bottom]:
-                        width, height = image.size
-                        new_width, new_height = int(width * scale), int(height * scale)
-                        x1, y1 = width // 2, height // 2
-                        x2, y2 = int(x1 * scale), int(y1 * scale)
-                        size_after = (int(width * scale), int(height * scale))
-                        image_np = np.array(image)
-                        resized_img = cv2.resize(image_np, dsize=size_after)
-                        deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-                        deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-                        framey = int(height * scale * 2)
-                        framex = int(width * scale * 2)
-                        finalimg = np.zeros((framey, framex, 4), np.uint8)
-                        finalimg[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                                int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-                        finalimg = finalimg[int(finalimg.shape[0] / 2 - height / 2):int(finalimg.shape[0] / 2 + height / 2),
-                                            int(finalimg.shape[1] / 2 - width / 2):int(finalimg.shape[1] / 2 + width / 2)]
-                        image.paste(Image.fromarray(finalimg), (0,0))
-                        
-
-                    # リサイズする 両端切る
-                    image_top = image_top.crop((132, 0, 828, 640))
-                    image_bottom = image_bottom.crop((132, 0, 828, 640))
-                    image_top = image_top.resize((696, 640), Image.LANCZOS)
-                    image_bottom = image_bottom.resize((696, 640), Image.LANCZOS)
-
-
-                    # 正方形にする　上下整える
-                    image_top = image_top.crop((28, 0, 668, 640)) # (696-640)/2 = 28
-                    image_bottom = image_bottom.crop((28, 0, 668, 640))
-                    image_top = image_top.resize((640, 640), Image.LANCZOS)
-                    image_bottom = image_bottom.resize((640, 640), Image.LANCZOS)
-                    
-                    # 縮小する
-                    image_top.thumbnail((100,100), Image.LANCZOS)
-                    image_bottom.thumbnail((100,100), Image.LANCZOS)
-                    silhouette_image.thumbnail((100,100), Image.LANCZOS)
-
-                    # 統合する
-                    final_image = Image.alpha_composite(image_bottom.convert("RGBA"), silhouette_image.convert("RGBA"))
-                    b_image = Image.alpha_composite(final_image.convert("RGBA"), image_top.convert("RGBA"))
-
-                    if playmark_files:
-                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA"))  
-                    
-                    # ファイル名を設定する
-                    if export_file_top:
-                        file_name = export_file_top.name
-                    else:
-                        file_name = export_file_bottom.name
-                    
                     # 100 × 100保存
                     binary_dict["/100x100/" + file_name] = b_image
 
@@ -216,7 +279,19 @@ with export_button1:
                     #　640 × 640、320 ×　320　のリサイズ
 
                     ####################################
-                   # 画像を読み込む
+                    d_image, file_name = generate_large_images(export_file_top, export_file_bottom, scale_640, horizontal_shift, vertical_shift)
+                    # 640 × 640保存
+                    binary_dict["/640x640/" + file_name] = d_image
+                    # 320 × 320保存
+                    c_image= d_image.resize((320, 320))
+                    binary_dict["/320x320/" + file_name] = c_image
+                    
+                    ####################################
+
+                    #　960 × 640のリサイズ
+
+                    ####################################
+                    # 画像を読み込む
                     if export_file_top:
                         image_top = Image.open(export_file_top).convert("RGBA")
                     else:
@@ -226,7 +301,6 @@ with export_button1:
                         image_bottom = Image.open(export_file_bottom).convert("RGBA")
                     else:
                         image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-                    
                     # 960×640
                     if export_file_top:
                         image_top = image_top.resize((960, 640))
@@ -234,67 +308,12 @@ with export_button1:
                     if export_file_bottom:
                         image_bottom = image_bottom.resize((960, 640))
                         binary_dict["/960x640/" + export_file_bottom.name] = image_bottom
-
-
-                    # 統合する
-                    image = Image.alpha_composite(image_bottom.convert("RGBA"), image_top.convert("RGBA"))
-
-                    # ちょっと縮小する　AI生成
-                    scale = scale_640
-                    width, height = image.size
-                    new_width, new_height = int(width * scale), int(height * scale)
-                    x1, y1 = width // 2, height // 2
-                    x2, y2 = int(x1 * scale), int(y1 * scale)
-                    size_after = (int(width * scale), int(height * scale))
-                    image_np = np.array(image)
-                    resized_img = cv2.resize(image_np, dsize=size_after)
-                    deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-                    deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-                    framey = int(height * scale * 2)
-                    framex = int(width * scale * 2)
-                    finalimg = np.zeros((framey, framex, 4), np.uint8)
-                    finalimg[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                            int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-                    finalimg = finalimg[int(finalimg.shape[0] / 2 - height / 2):int(finalimg.shape[0] / 2 + height / 2),
-                                        int(finalimg.shape[1] / 2 - width / 2):int(finalimg.shape[1] / 2 + width / 2)]
-                    image.paste(Image.fromarray(finalimg), (0,0))
-                        
-                    # 不要な透明画素を除去
-                    image = image.crop(image.getbbox())
-
-                    # 画像の幅と高さを取得
-                    width, height = image.size
-
-                    # 幅で足りない分は左右に足す
-                    pad_width_left = (640 - width) // 2 + horizontal_shift
-                    pad_width_right = (640 - width) // 2 - horizontal_shift
                     
-                    # 高さで足りない分は足す 下部微調整
-                    up = vertical_shift + 15
-                    pad_height = 640 - height - up
-                    padding = (pad_width_left, pad_height, pad_width_right, up)
-                    d_image = ImageOps.expand(image, padding)
-                    
-                    d_image = d_image.resize((640, 640))
-                    
-                    # 320×320を生成
-                    c_image = d_image.resize((320, 320))
-                    
-                    # ファイル名を設定する
-                    if export_file_top:
-                        file_name = export_file_top.name
-                    else:
-                        file_name = export_file_bottom.name
-
-                    # 統合した画像の保存（
-                    binary_dict["/640x640/" + file_name] = d_image
-                    binary_dict["/320x320/" + file_name] = c_image
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
         show_zip_download("mm_aura.zip", binary_dict)
     st.write('全てのファイルを書き出します。')
 st.markdown('---')
-
 
 
 # 320 640プレビュー処理
@@ -320,62 +339,7 @@ with st.spinner("画像生成中です..."):
             #　640 × 640、320 ×　320　のリサイズ
 
             ####################################
-            # 画像を読み込む
-            if export_file_top:
-                image_top = Image.open(export_file_top).convert("RGBA")
-            else:
-                image_top = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-            if export_file_bottom:
-                image_bottom = Image.open(export_file_bottom).convert("RGBA")
-            else:
-                image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-            # 統合する
-            image = Image.alpha_composite(image_bottom.convert("RGBA"), image_top.convert("RGBA"))
-
-            # ちょっと縮小する　AI生成
-            scale = scale_640
-            width, height = image.size
-            new_width, new_height = int(width * scale), int(height * scale)
-            x1, y1 = width // 2, height // 2
-            x2, y2 = int(x1 * scale), int(y1 * scale)
-            size_after = (int(width * scale), int(height * scale))
-            image_np = np.array(image)
-            resized_img = cv2.resize(image_np, dsize=size_after)
-            deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-            deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-            framey = int(height * scale * 2)
-            framex = int(width * scale * 2)
-            finalimg = np.zeros((framey, framex, 4), np.uint8)
-            finalimg[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                    int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-            finalimg = finalimg[int(finalimg.shape[0] / 2 - height / 2):int(finalimg.shape[0] / 2 + height / 2),
-                                int(finalimg.shape[1] / 2 - width / 2):int(finalimg.shape[1] / 2 + width / 2)]
-            image.paste(Image.fromarray(finalimg), (0,0))
-                
-            # 不要な透明画素を除去
-            image = image.crop(image.getbbox())
-
-            # 画像の幅と高さを取得
-            width, height = image.size
-
-            # 幅で足りない分は左右に足す
-            pad_width_left = (640 - width) // 2 + horizontal_shift
-            pad_width_right = (640 - width) // 2 - horizontal_shift
-
-            
-            # 高さで足りない分は足す 下部微調整
-            up = vertical_shift + 15
-            pad_height = 640 - height - up
-            padding = (pad_width_left, pad_height, pad_width_right, up)
-            d_image = ImageOps.expand(image, padding)
-            
-            # ファイル名を設定する
-            if export_file_top:
-                file_name = export_file_top.name
-            else:
-                file_name = export_file_bottom.name
+            d_image, file_name = generate_large_images(export_file_top, export_file_bottom, scale_640, horizontal_shift, vertical_shift)
             
             # 背景を読み込む
             back_image = Image.open("./data/mm_640_back.png")
@@ -401,10 +365,7 @@ with st.spinner("画像生成中です..."):
             # チェックボックス
             if cols[i % 3].checkbox("選択", key=f"select_{file_name}"):
                 selected_files.append((export_file_top, export_file_bottom))
-            
             i += 1
-
-
 
 # 個別書き出し 空のファイルリストはプレビューの中に
 with export_selected_button1:
@@ -419,11 +380,37 @@ with export_selected_button1:
             # export_files = list(zip(export_files_top, export_files_bottom))
 
             for export_file_top, export_file_bottom in selected_files:
-                # ####################################
+                    ####################################
 
                     #　50 × 50、100 × 100　のリサイズ
 
-                    # ####################################
+                    #####################################
+                    b_image, file_name = generate_small_images(export_file_top, export_file_bottom, export_files_top_male, export_files_bottom_male, silhouette_dict, playmark_files)
+
+                    # 100 × 100保存
+                    binary_dict["/100x100/" + file_name] = b_image
+
+                    # 50 × 50保存
+                    b_image = b_image.resize((50, 50))
+                    binary_dict["/50x50/" + file_name] = b_image
+                    
+                    ####################################
+
+                    #　640 × 640、320 ×　320　のリサイズ
+
+                    ####################################
+                    d_image, file_name = generate_large_images(export_file_top, export_file_bottom, scale_640, horizontal_shift, vertical_shift)
+                    # 640 × 640保存
+                    binary_dict["/640x640/" + file_name] = d_image
+                    # 320 × 320保存
+                    c_image= d_image.resize((320, 320))
+                    binary_dict["/320x320/" + file_name] = c_image
+                    
+                    ####################################
+
+                    #　960 × 640のリサイズ
+
+                    ####################################
                     # 画像を読み込む
                     if export_file_top:
                         image_top = Image.open(export_file_top).convert("RGBA")
@@ -434,95 +421,6 @@ with export_selected_button1:
                         image_bottom = Image.open(export_file_bottom).convert("RGBA")
                     else:
                         image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-                                        
-                    # 男女画像 
-                    if export_file_top in export_files_top_male or export_file_bottom in export_files_bottom_male:
-                        silhouette_image = Image.open(silhouette_dict["シルエット_男性.png"])
-                    else:
-                        silhouette_image = Image.open(silhouette_dict["シルエット_女性.png"])
-                        
-                    # 再生マーク
-                    if playmark_files:  
-                         playmark_image = Image.open(playmark_files[0]).convert("RGBA")  
-
-                    # ちょっと縮小する　AI生成
-                    scale = 0.93
-                    for image in [image_top, image_bottom]:
-                        width, height = image.size
-                        new_width, new_height = int(width * scale), int(height * scale)
-                        x1, y1 = width // 2, height // 2
-                        x2, y2 = int(x1 * scale), int(y1 * scale)
-                        size_after = (int(width * scale), int(height * scale))
-                        image_np = np.array(image)
-                        resized_img = cv2.resize(image_np, dsize=size_after)
-                        deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-                        deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-                        framey = int(height * scale * 2)
-                        framex = int(width * scale * 2)
-                        finalimg = np.zeros((framey, framex, 4), np.uint8)
-                        finalimg[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                                int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-                        finalimg = finalimg[int(finalimg.shape[0] / 2 - height / 2):int(finalimg.shape[0] / 2 + height / 2),
-                                            int(finalimg.shape[1] / 2 - width / 2):int(finalimg.shape[1] / 2 + width / 2)]
-                        image.paste(Image.fromarray(finalimg), (0,0))
-                        
-
-                    # リサイズする 両端切る
-                    image_top = image_top.crop((132, 0, 828, 640))
-                    image_bottom = image_bottom.crop((132, 0, 828, 640))
-                    image_top = image_top.resize((696, 640), Image.LANCZOS)
-                    image_bottom = image_bottom.resize((696, 640), Image.LANCZOS)
-
-
-                    # 正方形にする　上下整える
-                    image_top = image_top.crop((28, 0, 668, 640)) # (696-640)/2 = 28
-                    image_bottom = image_bottom.crop((28, 0, 668, 640))
-                    image_top = image_top.resize((640, 640), Image.LANCZOS)
-                    image_bottom = image_bottom.resize((640, 640), Image.LANCZOS)
-                    
-                    # 縮小する
-                    image_top.thumbnail((100,100), Image.LANCZOS)
-                    image_bottom.thumbnail((100,100), Image.LANCZOS)
-                    silhouette_image.thumbnail((100,100), Image.LANCZOS)
-
-                    # 統合する
-                    final_image = Image.alpha_composite(image_bottom.convert("RGBA"), silhouette_image.convert("RGBA"))
-                    b_image = Image.alpha_composite(final_image.convert("RGBA"), image_top.convert("RGBA"))
-                    
-                    if playmark_files:
-                        b_image = Image.alpha_composite(b_image.convert("RGBA"), playmark_image.convert("RGBA")) 
-                    
-                    # ファイル名を設定する
-                    if export_file_top:
-                        file_name = export_file_top.name
-                    else:
-                        file_name = export_file_bottom.name
-                    
-                    # 100 × 100保存
-                    binary_dict["/100x100/" + file_name] = b_image
-
-                    # 50 × 50保存
-                    b_image = b_image.resize((50, 50))
-                    binary_dict["/50x50/" + file_name] = b_image
-
-
-                    ####################################
-
-                    #　640 × 640、320 ×　320　のリサイズ
-
-                    ####################################
-                   # 画像を読み込む
-                    if export_file_top:
-                        image_top = Image.open(export_file_top).convert("RGBA")
-                    else:
-                        image_top = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-
-                    if export_file_bottom:
-                        image_bottom = Image.open(export_file_bottom).convert("RGBA")
-                    else:
-                        image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
-                    
                     # 960×640
                     if export_file_top:
                         image_top = image_top.resize((960, 640))
@@ -531,59 +429,6 @@ with export_selected_button1:
                         image_bottom = image_bottom.resize((960, 640))
                         binary_dict["/960x640/" + export_file_bottom.name] = image_bottom
 
-
-                    # 統合する
-                    image = Image.alpha_composite(image_bottom.convert("RGBA"), image_top.convert("RGBA"))
-
-                    # ちょっと縮小する　AI生成
-                    scale = scale_640
-                    width, height = image.size
-                    new_width, new_height = int(width * scale), int(height * scale)
-                    x1, y1 = width // 2, height // 2
-                    x2, y2 = int(x1 * scale), int(y1 * scale)
-                    size_after = (int(width * scale), int(height * scale))
-                    image_np = np.array(image)
-                    resized_img = cv2.resize(image_np, dsize=size_after)
-                    deltax = (width / 2 - x1) - (resized_img.shape[1] / 2 - x2)
-                    deltay = (height / 2 - y1) - (resized_img.shape[0] / 2 - y2)
-                    framey = int(height * scale * 2)
-                    framex = int(width * scale * 2)
-                    finalimg = np.zeros((framey, framex, 4), np.uint8)
-                    finalimg[int(-deltay + framey / 2 - resized_img.shape[0] / 2):int(-deltay + framey / 2 + resized_img.shape[0] / 2),
-                            int(-deltax + framex / 2 - resized_img.shape[1] / 2):int(-deltax + framex / 2 + resized_img.shape[1] / 2)] = resized_img
-                    finalimg = finalimg[int(finalimg.shape[0] / 2 - height / 2):int(finalimg.shape[0] / 2 + height / 2),
-                                        int(finalimg.shape[1] / 2 - width / 2):int(finalimg.shape[1] / 2 + width / 2)]
-                    image.paste(Image.fromarray(finalimg), (0,0))
-                        
-                    # 不要な透明画素を除去
-                    image = image.crop(image.getbbox())
-
-                    # 画像の幅と高さを取得
-                    width, height = image.size
-
-                    # 幅で足りない分は左右に足す
-                    pad_width_left = (640 - width) // 2 + horizontal_shift
-                    pad_width_right = (640 - width) // 2 - horizontal_shift
-                    
-                    # 高さで足りない分は足す 下部微調整
-                    up = vertical_shift + 15
-                    pad_height = 640 - height - up
-                    padding = (pad_width_left, pad_height, pad_width_right, up)
-                    d_image = ImageOps.expand(image, padding)
-                    d_image = d_image.resize((640, 640))
-                    
-                    # 320×320を生成
-                    c_image = d_image.resize((320, 320))
-                    
-                    # ファイル名を設定する
-                    if export_file_top:
-                        file_name = export_file_top.name
-                    else:
-                        file_name = export_file_bottom.name
-
-                    # 統合した画像の保存（
-                    binary_dict["/640x640/" + file_name] = d_image
-                    binary_dict["/320x320/" + file_name] = c_image
             time.sleep(3)
         st.markdown(f'<span style="color:red">書き出しが完了しました。ダウンロードボタンが表示されるまでお待ちください。</span>', unsafe_allow_html=True)
         show_zip_download("mm_aura2.zip", binary_dict)
