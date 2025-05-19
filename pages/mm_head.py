@@ -170,7 +170,7 @@ def generate_large_images(file_front, file_back, export_files_center, scale_640,
 
 st.set_page_config(page_title='mm頭・髪書き出し')
 
-st.title('mm頭・髪書き出し')
+st.title('mm頭・髪・顔素体付きピアス・ネックレス書き出し')
 st.write('<span style="color:red;">※未圧縮データを使ってください！</span>', unsafe_allow_html=True)
 col1, col2  = st.columns(2)
 
@@ -182,11 +182,11 @@ with col1:
 with col2:
     export_files_back = st.file_uploader("頭_後ろファイルを選択", type='png', accept_multiple_files=True, key="export_files_back")
 
-# 頭素体読み込み　変数変更めんどくさいので中のまま！！！！！！！！
-export_files_center = st.file_uploader("「mm_頭素体.png」を選択", type='png', accept_multiple_files=True, key="export_files_center")
+# 頭素体読み込み　
+export_files_center = st.file_uploader("素体画像を選択", type='png', accept_multiple_files=True, key="export_files_center")
 # ファイルが選択されていない場合はメッセージを表示する
 if not export_files_center:
-    st.write('<span style="color:red;">未選択です。「mm_頭素体.png」をアップロードしてください。</span>', unsafe_allow_html=True)
+    st.write('<span style="color:red;">未選択です。「mm_頭素体.png」ピアス・ネックレスの場合は「mm_白頭素体.png」をアップロードしてください。</span>', unsafe_allow_html=True)
 
 # ファイル名を昇順に並び替える　ローカルでは選択順にアップされるが、クラウド上ではなぜかバラバラになるので制御するために昇順に
 export_files_front = sorted(export_files_front, key=lambda x: x.name)
