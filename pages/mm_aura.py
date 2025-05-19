@@ -45,11 +45,14 @@ def generate_small_images(export_file_top, export_file_bottom, export_files_top_
     else:
         image_bottom = Image.new("RGBA", (960, 640), (0, 0, 0, 0))
 
-    # 男女画像
+    # しるえっと両方通るように
     if export_file_top in export_files_top_male or export_file_bottom in export_files_bottom_male:
-        silhouette_image = Image.open(silhouette_dict["シルエット_男性.png"])
+        silhouette_key = "シルエット_男性.png" if "シルエット_男性.png" in silhouette_dict else "silhouette_male.png"
     else:
-        silhouette_image = Image.open(silhouette_dict["シルエット_女性.png"])
+        silhouette_key = "シルエット_女性.png" if "シルエット_女性.png" in silhouette_dict else "silhouette_female.png"
+    
+    silhouette_image = Image.open(silhouette_dict[silhouette_key])
+
 
     # 再生マーク
     playmark_image = None
@@ -237,7 +240,7 @@ st.write('**320/640調整用** 　　50/100で調整が必要な場合はpsdで�
 # パラメータ調整スライダー 
 vertical_shift = st.slider('下移動⇔上移動', min_value=-320, max_value=320, value=0)
 horizontal_shift = st.slider('左移動⇔右移動', min_value=-320, max_value=320, value=0)
-scale_640 = st.slider('縮小⇔拡大　デフォルトは0.67', min_value=0.5, max_value=0.84, value=0.67)
+scale_640 = st.slider('縮小⇔拡大　デフォルトは0.67', min_value=0.5, max_value=1.0, value=0.67)
 
 
 # 一括書き出しと個別書き出し
