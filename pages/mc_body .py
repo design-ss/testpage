@@ -156,21 +156,20 @@ def generate_large_images(file_front, file_center, file_back, head_file):
         crop_image = image.crop(image.getbbox())
         # 画像の幅と高さを取得
         width, height = crop_image.size
-        # width, heightどちらか大きい方を640になるようにアス比を維持しつつ縮小
-        max_size = max(width, height)
-        new_width = int(width * (640 / max_size))
-        new_height = int(height * (640 / max_size))
-        image = crop_image.resize((new_width, new_height))
 
-        # 小さい方を640-小さい変数//2 で足りないpixel分足す処理
-        if new_width < 640:
-            padding_left = (640 - new_width) // 2
-            padding_right = 640 - new_width - padding_left
-            d_image = ImageOps.expand(image, (padding_left, 0, padding_right, 0))
-        elif new_height < 640:
-            padding_top = (640 - new_height) // 2
-            padding_bottom = 640 - new_height - padding_top
-            d_image = ImageOps.expand(image, (0, padding_top, 0, padding_bottom))
+        # アスペクト比を維持し、長辺が640pxになるようにリサイズする。
+        # int()による切り捨てで長辺が639pxになるのを防ぐためround()を使用する。
+        scale = 640 / max(width, height)
+        new_width = min(640, max(1, round(width * scale)))
+        new_height = min(640, max(1, round(height * scale)))
+        resized_image = crop_image.resize((new_width, new_height), Image.LANCZOS)
+
+        # 必ず640×640の透明キャンバスを作り、その中央にリサイズ画像を配置する。
+        # 縦横の両方を独立して補完するため、出力サイズは常に640×640になる。
+        d_image = Image.new("RGBA", (640, 640), (0, 0, 0, 0))
+        paste_x = (640 - new_width) // 2
+        paste_y = (640 - new_height) // 2
+        d_image.alpha_composite(resized_image, (paste_x, paste_y))
     else:
         d_image = image.crop((180, 0, 820, image.height))
                                                     
@@ -190,7 +189,8 @@ st.title('mc見た目体書き出し')
 
 # st.write('**ID付与前に複数構造のものを書き出す場合はお気をつけください。** <p style="font-size: 80%;"></p>', unsafe_allow_html=True)
 st.write('**「前後ありオーラ」「前のみ」「後ろのみ」の3種類を一気に処理はできません。** <p style="font-size: 80%;">アプリをリロードしてそれぞれ書き出してください。<br><br><br></p>', unsafe_allow_html=True)
-st.write('<span style="color:red;">※未圧縮データを使ってください！</span>', unsafe_allow_html=True)
+st.write('<span style="color:red;">※未圧縮データを使ってください</span>', unsafe_allow_html=True)
+st.write('<span style="color:red;">※mcの体は独自ポーズの場合は影付きで書き出してください</span>', unsafe_allow_html=True) #今度ちゃんと書きなおす
 col1, col2 , col3 = st.columns(3)
 
 # 前ファイル指定
@@ -215,14 +215,13 @@ col4 , col5 = st.columns(2)
 with col4:
     # 属性ファイル
     st.write('**属性**<span style="color:red; font-size: 80%;">　※必須</span>', unsafe_allow_html=True)
-    st.write('<span style="font-size: 80%;">属性画像はローカルからアップロードお願いします。トレロに全属性画像のフォルダを記載してます。</span>', unsafe_allow_html=True)
     attribution_file = st.file_uploader("選択", type='png', accept_multiple_files=False, key="attribution_file")
     # ファイルが選択されていない場合はメッセージを表示する
     if not attribution_file:
         st.write('<span style="color:red;">未選択です。属性画像をアップロードしてください。</span>', unsafe_allow_html=True)
 
 with col5:
-    st.write('**オマケ：頭（なくても書き出しできます）**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「mc_頭素体.png」をアップロードしてください。<br></p>', unsafe_allow_html=True)
+    st.write('**オマケ：頭（なくても書き出しできます）**<p style="font-size: 80%;">頭素体を付け忘れた時に追加できます。「mc_head.png」をアップロードしてください。<br></p>', unsafe_allow_html=True)
     # 頭素体
     head_file= st.file_uploader("選択", type='png', accept_multiple_files=True, key="head_file")
 
