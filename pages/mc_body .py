@@ -21,6 +21,11 @@ CANVAS_SIZE = (960, 640)
 LARGE_SIZE = (640, 640)
 SMALL_SIZE = (100, 100)
 
+# 頭素体は960x640画像内の固定位置にあるため、顔中央の領域で判定する。
+# 影は形が変わるため、足元に横長の暗い連続領域があるかを補助的に見る。
+HEAD_CORE_BOX = (450, 60, 545, 160)
+SHADOW_SEARCH_BOX = (350, 575, 670, 620)
+
 
 def safe_name(name):
     """ZIP内にディレクトリを作らない安全なファイル名にする。"""
@@ -46,6 +51,90 @@ def open_rgba(file_data):
     _, image_bytes = file_data
     with Image.open(io.BytesIO(image_bytes)) as image:
         return image.convert("RGBA").resize(CANVAS_SIZE, Image.Resampling.LANCZOS)
+
+
+def has_head_base(image):
+    """固定位置に頭素体らしい不透明な肌色領域があるかを判定する。"""
+    crop = image.crop(HEAD_CORE_BOX)
+    pixels = tuple(crop.getdata())
+    pixel_count = len(pixels)
+    if pixel_count == 0:
+        return False
+
+    opaque_count = 0
+    skin_count = 0
+    for red, green, blue, alpha in pixels:
+        if alpha < 64:
+            continue
+        opaque_count += 1
+        if (
+            red >= 160
+            and 70 <= green <= 245
+            and 50 <= blue <= 230
+            and red > green
+            and red > blue
+        ):
+            skin_count += 1
+
+    opaque_ratio = opaque_count / pixel_count
+    skin_ratio = skin_count / pixel_count
+    return opaque_ratio >= 0.70 and skin_ratio >= 0.30
+
+
+def longest_true_run(values):
+    """真が連続する最長の長さを返す。"""
+    longest = 0
+    current = 0
+    for value in values:
+        if value:
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 0
+    return longest
+
+
+def has_ground_shadow(image):
+    """足元に影らしい横長の暗色領域があるかを補助判定する。"""
+    crop = image.crop(SHADOW_SEARCH_BOX)
+    qualifying_rows = 0
+
+    for y in range(crop.height):
+        dark_pixels = []
+        for red, green, blue, alpha in (
+            crop.getpixel((x, y)) for x in range(crop.width)
+        ):
+            dark_pixels.append(
+                alpha >= 64 and max(red, green, blue) <= 100
+            )
+
+        if longest_true_run(dark_pixels) >= 70:
+            qualifying_rows += 1
+
+    return qualifying_rows >= 5
+
+
+@st.cache_data(show_spinner=False)
+def find_items_without_head_and_shadow(front_files, center_files, back_files):
+    """頭素体と影の両方を確認できない組み合わせ名を返す。"""
+    max_length = max(len(front_files), len(center_files), len(back_files))
+    fronts = list(front_files) + [None] * (max_length - len(front_files))
+    centers = list(center_files) + [None] * (max_length - len(center_files))
+    backs = list(back_files) + [None] * (max_length - len(back_files))
+    missing_names = []
+
+    for front, center, back in zip(fronts, centers, backs):
+        front_image = open_rgba(front)
+        center_image = open_rgba(center)
+        back_image = open_rgba(back)
+
+        composite = Image.alpha_composite(back_image, center_image)
+        composite = Image.alpha_composite(composite, front_image)
+
+        if not has_head_base(composite) and not has_ground_shadow(composite):
+            missing_names.append(select_output_name(front, center, back))
+
+    return tuple(missing_names)
 
 
 def image_to_png_bytes(image):
@@ -589,6 +678,23 @@ def main():
     has_body_files = bool(front_uploads or center_uploads or back_uploads)
     if not has_body_files:
         return
+
+    front_files = uploaded_files_to_data(front_uploads)
+    center_files = uploaded_files_to_data(center_uploads)
+    back_files = uploaded_files_to_data(back_uploads)
+
+    missing_head_and_shadow = find_items_without_head_and_shadow(
+        front_files,
+        center_files,
+        back_files,
+    )
+    if missing_head_and_shadow:
+        st.warning(
+            "頭素体と影をつけていますか？"
+            f"（頭素体と影の両方を確認できない画像："
+            f"{len(missing_head_and_shadow)}件）"
+        )
+
     if attribution_upload is None:
         st.info("属性画像をアップロードすると、調整プレビューを表示します。")
         return
@@ -596,9 +702,6 @@ def main():
     if len(head_uploads) > 1:
         st.warning("頭ファイルは先頭の1件だけを使用します。")
 
-    front_files = uploaded_files_to_data(front_uploads)
-    center_files = uploaded_files_to_data(center_uploads)
-    back_files = uploaded_files_to_data(back_uploads)
     head_file = uploaded_file_to_data(head_uploads[0]) if head_uploads else None
     attribution_bytes = attribution_upload.getvalue()
 
